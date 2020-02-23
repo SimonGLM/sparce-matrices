@@ -1,8 +1,8 @@
-class sparce(object):
-    def __init__(self,ndsparce):
+class sparse(object):
+    def __init__(self,ndsparse):
         # NEEDSDOC
         '''Author: Simon Glennemeier-Marke & Henrik Spielvogel'''
-        self.INCOMING=ndsparce
+        self.INCOMING=ndsparse
         self.ParseToCSR(self.INCOMING)
         self.CSR={'AVAL':[],'JCOL':[],'IROW':[]} # This might change as it might be replaced by a dedicated CSR object...
     
@@ -13,7 +13,7 @@ class sparce(object):
         
         Constructs a CSR form of a given array.
         Args:
-        > 'INCOMING' :  sparce numpy array
+        > 'INCOMING' :  sparse numpy array
         
         Returns:
         > self.CSR :  dict containing the CSR object
