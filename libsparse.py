@@ -62,4 +62,13 @@ class sparse(object):
 
 
 if __name__ == "__main__":
+    # TESTING
+    size = 64
+    scipy.sparse.block_diag([rng.uniform(0, 3, size=(3, 3))for i in range(10)])
+    array = scipy.sparse.spdiags(data=[np.abs(rng.triangular(left=0, mode=0.2, right=2, size=size)) for i in range(5)], diags=[-2, -1, 0, 1, 2], m=size, n=size).toarray()
+    # array = np.asarray([rng.choice((0, rng.integers(0, 4))) for i in range(64)]).reshape((8, 8))
+    a = sparse(array)
+    print(a)
+    plt.matshow(a.INCOMING)
+    plt.show()
     pass
