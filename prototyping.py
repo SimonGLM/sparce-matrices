@@ -1,0 +1,3 @@
+if __name__ == "__main__":
+    # Do nothing...
+    pass
