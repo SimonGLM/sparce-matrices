@@ -6,7 +6,7 @@ rng = np.random.default_rng()
 
 
 class sparse(object):
-    # NEEDSDOC
+    # TODO NEEDSDOC
     '''
     Author: Simon Glennemeier-Marke & Henrik Spielvogel
 
@@ -26,7 +26,7 @@ class sparse(object):
         return '<sparse matrix of shape {} and sparsity {:.2f}>'.format(self.INCOMING.shape, self.sparsity)
 
     def construct_CSR(self, array):
-        # NEEDSDOC
+        # TODO NEEDSDOC
         '''
         Author: Simon Glennemeier-Marke
 
@@ -53,11 +53,15 @@ class sparse(object):
         Author: Simon Glennemeier-Marke
 
         Decide which storage scheme to use based on matrix density.
+
+        Args:
+        > array : np.ndarray
         '''
         if 1 > self.sparsity >= .5:
             self.CSR = self.construct_CSR(array)
         elif .5 > self.sparsity > 0:
-            raise NotImplementedError
+            print('NotImplementedError: falling back to implemented methods')
+            self.CSR = self.construct_CSR(array)
         else:
             raise ValueError('Sparisty should be in open interval (0,1), but is {:.3f}'.format(self.sparsity))
 
@@ -66,12 +70,18 @@ class sparse(object):
     # TODO: Needs class methods for gaussian elimination etc...
 
 
+def random_banded(size, num_diags):
+    # TODO NEEDSDOC
+    '''Author: Simon Glennemeier-Marke'''
+    mat = scipy.sparse.diags([rng.uniform(0, 1, size=size) for i in range(num_diags)], range((-num_diags+1)//2, (num_diags+1)//2), shape=(size, size)).toarray()
+    return scipy.sparse.eye(size)+(mat+np.transpose(mat))/2
+
+
 if __name__ == "__main__":
     # TESTING
-    size = 64
-    array = scipy.sparse.block_diag([rng.uniform(0, 3, size=(3, 3))for i in range(10)]).toarray()
-    a = sparse(array)
+    a = sparse(random_banded(50, 5))
     print(a)
     plt.matshow(a.INCOMING)
+    plt.colorbar()
     plt.show()
     pass
