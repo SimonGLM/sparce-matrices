@@ -20,13 +20,12 @@ class sparse(object):
     def __init__(self, array: np.ndarray):
         self.INCOMING = array if (type(array) == np.ndarray) else np.asfarray(array)
         self.sparsity = 1 - np.count_nonzero(self.INCOMING)/self.INCOMING.size
-        self.CSR = {'AVAL': [], 'JCOL': [], 'IROW': []}  # This might change as it might be replaced by a dedicated CSR object...
-        self._choose_scheme()
+        self._choose_scheme(self.INCOMING)
 
     def __repr__(self):
         return '<sparse matrix of shape {} and sparsity {:.2f}>'.format(self.INCOMING.shape, self.sparsity)
 
-    def construct_CSR(self):
+    def construct_CSR(self, array):
         # NEEDSDOC
         '''
         Author: Simon Glennemeier-Marke
@@ -38,16 +37,17 @@ class sparse(object):
         Returns:
         > self.CSR :  dict containing the CSR object
         '''
-        for j, col in enumerate(self.INCOMING):
+        csr = {'AVAL': [], 'JCOL': [], 'IROW': []}
+        for j, col in enumerate(array):
             for i, el in enumerate(col):
                 if el != 0:
-                    self.CSR['AVAL'].append(el)
-                    self.CSR['JCOL'].append(i)
+                    csr['AVAL'].append(el)
+                    csr['JCOL'].append(i)
                 continue
-            self.CSR['IROW'].append(len(self.CSR['AVAL']))
-        pass
+            csr['IROW'].append(len(csr['AVAL']))
+        return csr
 
-    def _choose_scheme(self):
+    def _choose_scheme(self, array):
         # "_method" means python won't import this method with wildcard import "from lib import * "
         '''
         Author: Simon Glennemeier-Marke
@@ -55,7 +55,7 @@ class sparse(object):
         Decide which storage scheme to use based on matrix density.
         '''
         if self.sparsity > .5:
-            self.construct_CSR()
+            self.CSR = self.construct_CSR(array)
         elif self.sparsity > 0:
             raise NotImplementedError
         else:
