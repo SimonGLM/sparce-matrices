@@ -20,8 +20,8 @@ class sparse(object):
     def __init__(self, array: np.ndarray):
         self.INCOMING = array if (type(array) == np.ndarray) else np.asfarray(array)
         self.sparsity = 1 - np.count_nonzero(self.INCOMING)/self.INCOMING.size
-        self._choose_scheme()
         self.CSR = {'AVAL': [], 'JCOL': [], 'IROW': []}  # This might change as it might be replaced by a dedicated CSR object...
+        self._choose_scheme()
 
     def __repr__(self):
         return '<sparse matrix of shape {} and sparsity {:.2f}>'.format(self.INCOMING.shape, self.sparsity)
@@ -38,8 +38,13 @@ class sparse(object):
         Returns:
         > self.CSR :  dict containing the CSR object
         '''
-        # TODO: Construct CSR in here
-
+        for j, col in enumerate(self.INCOMING):
+            for i, el in enumerate(col):
+                if el != 0:
+                    self.CSR['AVAL'].append(el)
+                    self.CSR['JCOL'].append(i)
+                continue
+            self.CSR['IROW'].append(len(self.CSR['AVAL']))
         pass
 
     def _choose_scheme(self):
@@ -64,9 +69,7 @@ class sparse(object):
 if __name__ == "__main__":
     # TESTING
     size = 64
-    scipy.sparse.block_diag([rng.uniform(0, 3, size=(3, 3))for i in range(10)])
-    array = scipy.sparse.spdiags(data=[np.abs(rng.triangular(left=0, mode=0.2, right=2, size=size)) for i in range(5)], diags=[-2, -1, 0, 1, 2], m=size, n=size).toarray()
-    # array = np.asarray([rng.choice((0, rng.integers(0, 4))) for i in range(64)]).reshape((8, 8))
+    array = scipy.sparse.block_diag([rng.uniform(0, 3, size=(3, 3))for i in range(10)]).toarray()
     a = sparse(array)
     print(a)
     plt.matshow(a.INCOMING)
