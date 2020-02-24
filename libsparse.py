@@ -54,12 +54,12 @@ class sparse(object):
 
         Decide which storage scheme to use based on matrix density.
         '''
-        if self.sparsity > .5:
+        if 1 > self.sparsity >= .5:
             self.CSR = self.construct_CSR(array)
-        elif self.sparsity > 0:
+        elif .5 > self.sparsity > 0:
             raise NotImplementedError
         else:
-            raise ValueError('Sparisty should be in interval (0,1), but is {:.3f}'.format(self.sparsity))
+            raise ValueError('Sparisty should be in open interval (0,1), but is {:.3f}'.format(self.sparsity))
 
         pass
 
