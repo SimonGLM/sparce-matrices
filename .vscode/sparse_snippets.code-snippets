@@ -23,7 +23,6 @@
 		],
 		"body": [
 			"def ${1:method}($3):",
-			"# TODO NEEDSDOC",
 			"\t'''Author: ${2:author}'''",
 			"\t$0",
 			"\tpass",
