@@ -23,10 +23,6 @@ class sparse(object):
         pass
 
     # TODO: Needs class methods for gaussian elimination
-    def func(x):
-        '''Author: henrik spielvogel'''
-        
-        pass
         
 if __name__ == "__main__":
     pass
