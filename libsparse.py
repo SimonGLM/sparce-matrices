@@ -72,7 +72,11 @@ class sparse(object):
 
 def random_banded(size, num_diags):
     # TODO NEEDSDOC
-    '''Author: Simon Glennemeier-Marke'''
+    '''Author: Simon Glennemeier-Marke
+    
+    Create quadratic banded sparse matrix of dimension 'size' with 'num_diags' diagonals
+    
+    '''
     mat = scipy.sparse.diags([rng.uniform(0, 1, size=size) for i in range(num_diags)], range((-num_diags+1)//2, (num_diags+1)//2), shape=(size, size)).toarray()
     return scipy.sparse.eye(size)+(mat+np.transpose(mat))/2
 
