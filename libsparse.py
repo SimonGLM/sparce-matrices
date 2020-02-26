@@ -13,6 +13,7 @@ class sparse(object):
     A sparse array object
     =====================
 
+    This object is the general sparse matrix object
     Arguments:
     > array : np.ndarray of arbitrary size
     '''
@@ -31,6 +32,7 @@ class sparse(object):
         Author: Simon Glennemeier-Marke
 
         Constructs a CSR form of a given array.
+
         Args:
         > 'INCOMING' :  sparse numpy array
 
