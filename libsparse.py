@@ -45,6 +45,8 @@ class sparse(object):
                     csr['JCOL'].append(i)
                 continue
             csr['IROW'].append(len(csr['AVAL']))
+            
+        
         return csr
 
     def _choose_scheme(self, array):
@@ -68,6 +70,49 @@ class sparse(object):
         pass
 
     # TODO: Needs class methods for gaussian elimination etc...
+    
+
+
+    
+    
+    def matvec(self, vec):
+        '''Author: Henrik Spielvogel
+        
+        Calculates the matrix-vector product of a sparse matrix with 'vec'.
+        
+        Args:
+        > 'vec' :  list or array of same length as matrix
+
+        Returns:
+        > outvec :  np.ndarray
+        
+        '''
+
+        n = self.INCOMING.shape[0]
+        vec = vec if type(vec) == np.ndarray else np.array(vec)
+        outvec = []
+
+        if vec.shape[0] == n:
+            for i in range(n):
+                val = 0
+                if i == 0:
+                    for j in [0, self.CSR['IROW'][i]-1]:
+                        val += vec[self.CSR['JCOL'][j]] * self.CSR['AVAL'][j]
+                    outvec.append(val)
+                        
+                else:
+                    for j in np.arange(self.CSR['IROW'][i-1], self.CSR['IROW'][i]):
+                        val += vec[self.CSR['JCOL'][j]] * self.CSR['AVAL'][j]
+                    outvec.append(val)
+                        
+        else:
+            raise ValueError('Shape of vec must be ({},), but is {}'.format(n, vec.shape))        
+            
+        
+        return np.array(outvec)
+
+        
+        
 
 
 def random_banded(size, num_diags):
@@ -83,9 +128,13 @@ def random_banded(size, num_diags):
 
 if __name__ == "__main__":
     # TESTING
-    a = sparse(random_banded(50, 5))
-    print(a)
-    plt.matshow(a.INCOMING)
-    plt.colorbar()
-    plt.show()
+    N=1000
+    a = sparse(random_banded(N, 2))
+    vector = [rng.integers(-10,10) for i in range(N)]
+
+    b = a.matvec(vector)
+    c = np.dot(a.INCOMING,vector)
+
+    print(np.allclose(b,c))
+
     pass
