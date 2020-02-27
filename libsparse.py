@@ -37,7 +37,7 @@ class sparse(object):
         Returns:
         > self.CSR :  dict containing the CSR object
         '''
-        csr = {'AVAL': [], 'JCOL': [], 'IROW': []}
+        csr = {'AVAL': [], 'JCOL': [], 'IROW': [0]}
         for j, col in enumerate(array):
             for i, el in enumerate(col):
                 if el != 0:
@@ -95,21 +95,14 @@ class sparse(object):
         if vec.shape[0] == n:
             for i in range(n):
                 val = 0
-                if i == 0:
-                    for j in [0, self.CSR['IROW'][i]-1]:
-                        val += vec[self.CSR['JCOL'][j]] * self.CSR['AVAL'][j]
-                    outvec.append(val)
-                        
-                else:
-                    for j in np.arange(self.CSR['IROW'][i-1], self.CSR['IROW'][i]):
-                        val += vec[self.CSR['JCOL'][j]] * self.CSR['AVAL'][j]
-                    outvec.append(val)
-                        
+                for j in np.arange(self.CSR['IROW'][i], self.CSR['IROW'][i+1]):
+                    val += vec[self.CSR['JCOL'][j]] * self.CSR['AVAL'][j]
+                outvec.append(val)    
         else:
-            raise ValueError('Shape of vec must be ({},), but is {}'.format(n, vec.shape))        
+            raise ValueError('Shape of vec must be ({},), but is {}.'.format(n, vec.shape))        
             
-        
         return np.array(outvec)
+   
 
         
         
@@ -132,9 +125,13 @@ if __name__ == "__main__":
     a = sparse(random_banded(N, 2))
     vector = [rng.integers(-10,10) for i in range(N)]
 
+    from timeit import default_timer as timer
+    t0 = timer()    
     b = a.matvec(vector)
+    t1 = timer()    
     c = np.dot(a.INCOMING,vector)
-
+    t2 = timer()
     print(np.allclose(b,c))
+    print("matvec took {}s and numpy {}s".format(t1-t0,t2-t1))
 
     pass
