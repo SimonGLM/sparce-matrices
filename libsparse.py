@@ -26,6 +26,9 @@ class sparse(object):
     def __repr__(self):
         return '<sparse matrix of shape {} and sparsity {:.2f}>'.format(self.INCOMING.shape, self.sparsity)
 
+    def __mul__(self, other):
+        return self.matvec(other)
+
     def construct_CSR(self, array):
         # TODO NEEDSDOC
         '''
@@ -129,8 +132,8 @@ if __name__ == "__main__":
 
     from timeit import default_timer as timer
     t0 = timer()    
-    b = a.matvec(vector)
-    t1 = timer()    
+    b = a*vector
+    t1 = timer()
     c = np.dot(a.INCOMING,vector)
     t2 = timer()
     print(np.allclose(b,c))
