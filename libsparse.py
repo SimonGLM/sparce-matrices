@@ -39,7 +39,7 @@ class sparse(object):
         Returns:
         > self.CSR :  dict containing the CSR object
         '''
-        csr = {'AVAL': [], 'JCOL': [], 'IROW': []}
+        csr = {'AVAL': [], 'JCOL': [], 'IROW': [0]}
         for j, col in enumerate(array):
             for i, el in enumerate(col):
                 if el != 0:
@@ -47,6 +47,8 @@ class sparse(object):
                     csr['JCOL'].append(i)
                 continue
             csr['IROW'].append(len(csr['AVAL']))
+            
+        
         return csr
 
     def _choose_scheme(self, array):
@@ -70,20 +72,68 @@ class sparse(object):
         pass
 
     # TODO: Needs class methods for gaussian elimination etc...
+    
+
+
+    
+    
+    def matvec(self, vec):
+        '''Author: Henrik Spielvogel
+        
+        Calculates the matrix-vector product of a sparse matrix with 'vec'.
+        
+        Args:
+        > 'vec' :  list or array of same length as matrix
+
+        Returns:
+        > outvec :  np.ndarray
+        
+        '''
+
+        n = self.INCOMING.shape[0]
+        vec = vec if type(vec) == np.ndarray else np.array(vec)
+        outvec = []
+
+        if vec.shape[0] == n:
+            for i in range(n):
+                val = 0
+                for j in np.arange(self.CSR['IROW'][i], self.CSR['IROW'][i+1]):
+                    val += vec[self.CSR['JCOL'][j]] * self.CSR['AVAL'][j]
+                outvec.append(val)    
+        else:
+            raise ValueError('Shape of vec must be ({},), but is {}.'.format(n, vec.shape))        
+            
+        return np.array(outvec)
+   
+
+        
+        
 
 
 def random_banded(size, num_diags):
     # TODO NEEDSDOC
-    '''Author: Simon Glennemeier-Marke'''
+    '''Author: Simon Glennemeier-Marke
+    
+    Create quadratic banded sparse matrix of dimension 'size' with 'num_diags' diagonals
+    
+    '''
     mat = scipy.sparse.diags([rng.uniform(0, 1, size=size) for i in range(num_diags)], range((-num_diags+1)//2, (num_diags+1)//2), shape=(size, size)).toarray()
     return scipy.sparse.eye(size)+(mat+np.transpose(mat))/2
 
 
 if __name__ == "__main__":
     # TESTING
-    a = sparse(random_banded(50, 5))
-    print(a)
-    plt.matshow(a.INCOMING)
-    plt.colorbar()
-    plt.show()
+    N=1000
+    a = sparse(random_banded(N, 2))
+    vector = [rng.integers(-10,10) for i in range(N)]
+
+    from timeit import default_timer as timer
+    t0 = timer()    
+    b = a.matvec(vector)
+    t1 = timer()    
+    c = np.dot(a.INCOMING,vector)
+    t2 = timer()
+    print(np.allclose(b,c))
+    print("matvec took {}s and numpy {}s".format(t1-t0,t2-t1))
+
     pass
