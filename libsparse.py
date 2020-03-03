@@ -17,7 +17,7 @@ sp.sparse(array: np.ndarray):
 > The CSR format stores all values in a list and only the column index and where new rows begin.
 
 sp.random_banded(size: int, num_diags: int):
-> Creates, displays and returns a sparse `size`×`size` matrix which is banded.
+> Creates, displays and returns a sparse `size`Ãƒâ€”`size` matrix which is banded.
 > I.e. it only has non-zero values on num_diags centered diagonals.
 
 
@@ -48,6 +48,7 @@ class sparse(object):
     def __init__(self, array: np.ndarray):
         self.INCOMING = array if (type(array) == np.ndarray) else np.asfarray(array)
         self.sparsity = 1 - np.count_nonzero(self.INCOMING)/self.INCOMING.size
+        self.shape = self.INCOMING.shape
         self._choose_scheme(self.INCOMING)
 
     def __repr__(self):
@@ -129,6 +130,60 @@ class sparse(object):
             raise ValueError('Shape of vec must be ({},), but is {}.'.format(n, vec.shape))
 
         return np.array(outvec)
+
+
+def lookup(array: sparse, i=None, j=None):
+    '''
+    Author: Simon Glennemeier-Marke
+
+    General utility function for sparse arrays.
+    If `lookup` is called with only one of `i` or `j`, it will call recursively get
+    all elements of one row/column with index `i`/`j` and return a it as a list.
+    See examples.
+
+    Arguments:
+    ----------
+    > `array`: Input array of <class sparse>
+    > `i`: Index of row
+    > `j`: Index of column
+
+    Examples
+    --------
+     >>> rng = np.random.default_rng()
+     >>> a = sparse(rng.integers(0,4,(3,4)))
+     >>> a.INCOMING
+     array([[1, 2, 2, 0],
+            [0, 0, 1, 2],
+            [3, 0, 3, 0]])
+
+     >>> lookup(a,i=1,j=2)
+     2
+
+     >>> lookup(a,i=1)
+     [1, 0, 3]
+
+     >>> lookup(a,j=3)
+     [3, 0, 3, 0]"
+    '''
+
+    if i != None and j != None:
+        if i == 0 or j == 0:
+            raise IndexError('Indices count from 1')
+        i -= 1
+        j -= 1
+        array: sparse
+        slice_ = slice(array.CSR['IROW'][i], array.CSR['IROW'][i+1])
+        if j in array.CSR['JCOL'][slice_]:
+            j_index = array.CSR['IROW'][i]+array.CSR['JCOL'][slice_].index(j)
+            return array.CSR['AVAL'][j_index]
+        else:
+            return 0
+    if i != None and j == None:
+        # Retrun row at `i`
+        return [lookup(array, i, k) for k in range(1, array.shape[1]+1)]
+    if i == None and j != None:
+        # Return col at `JCOL`
+        return [lookup(array, k, j) for k in range(1, array.shape[0]+1)]
 
 
 def random_banded(size, num_diags):
