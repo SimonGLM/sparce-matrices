@@ -242,6 +242,7 @@ if __name__ == "__main__":
     cnp = np.dot(b.INCOMING, a.INCOMING)
     print(np.allclose(csp.INCOMING, cnp))
 
+    # vector = rng.integers(-10, 10, N)
     # from timeit import default_timer as timer
     # t0 = timer()
     # b = a*vector
