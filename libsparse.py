@@ -52,10 +52,11 @@ class sparse(object):
         self._choose_scheme(self.INCOMING)
 
     def __repr__(self):
-        return '<sparse matrix of shape {} and sparsity {:.2f}>'.format(self.INCOMING.shape, self.sparsity)
+        return '<sparse matrix of shape {} and sparsity {:.2f}>'.format(self.shape, self.sparsity)
 
     def __mul__(self, other):
-        return self.matvec(other)
+        # FIXME distinguish between mat-mat and mat-vec products. Or implement mat-vec in ldot
+        return self.ldot(other)
 
     def construct_CSR(self, array):
         # TODO NEEDSDOC
@@ -89,15 +90,15 @@ class sparse(object):
         Decide which storage scheme to use based on matrix density.
 
         Args:
-        > array : np.ndarray
+        > `array` : np.ndarray
         '''
         if 1 > self.sparsity >= .5:
             self.CSR = self.construct_CSR(array)
-        elif .5 > self.sparsity > 0:
+        elif .5 > self.sparsity >= 0:
             print('NotImplementedError: falling back to implemented methods')
             self.CSR = self.construct_CSR(array)
         else:
-            raise ValueError('Sparisty should be in open interval (0,1), but is {:.3f}'.format(self.sparsity))
+            raise ValueError('Sparisty should be in half-open interval [0,1), but is {:.3f}'.format(self.sparsity))
 
         pass
 
@@ -132,7 +133,7 @@ class sparse(object):
         return np.array(outvec)
 
     def ldot(self, other):
-        # TODO NEEDSDOC
+        # FIXME needs to be rightsided dot prod
         '''
         Author: Simon Glennemeier-Marke
 
@@ -229,10 +230,17 @@ def random_banded(size, num_diags):
 
 
 if __name__ == "__main__":
-    # TESTING
-    N = 1000
-    a = sparse(np.eye(N))  # random_banded(N, 2))
-    vector = [rng.integers(-10, 10) for i in range(N)]
+    rng: np.random.Generator  # hint for IntelliSense
+    N = 10
+    # a = sparse(np.eye(N))
+    # a = sparse(random_banded(N, 2))
+    a = sparse(rng.integers(-10, 10, (N, N-3)))
+    # b = sparse(np.eye(N))
+    # b = sparse(random_banded(N, 2))
+    b = sparse(rng.integers(-5, 5, (N-3, N)))
+    csp = a*b
+    cnp = np.dot(b.INCOMING, a.INCOMING)
+    vector = rng.integers(-10, 10, N)
 
     from timeit import default_timer as timer
     t0 = timer()
