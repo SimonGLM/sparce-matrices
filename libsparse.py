@@ -131,6 +131,35 @@ class sparse(object):
 
         return np.array(outvec)
 
+    def ldot(self, other):
+        # TODO NEEDSDOC
+        '''
+        Author: Simon Glennemeier-Marke
+
+        To avoid confusion about commutativity,
+        use:
+
+        " `A` * `B` "
+
+        `ldot` computes the leftsided dot product
+        > `A.ldot(B)` = " `B` * `A` "
+
+        Returns:
+        --------
+        > <class sparse> of multiplied matrices
+        '''
+        if type(other) != sparse:
+            raise TypeError('Argument has to be {}, not {}'.format(type(self), type(other)))
+        if self.shape[1] != other.shape[0]:
+            raise AttributeError('Shapes do not match')
+        result = np.zeros((other.shape[0], self.shape[1]))
+        for i in range(1, other.shape[0]+1):
+            for j in range(1, self.shape[1]+1):
+                row = lookup(other, i=i)
+                col = lookup(self, j=j)
+                result[i-1, j-1] = sum([r*c for r, c in zip(row, col)])
+        return sparse(result)
+
 
 def lookup(array: sparse, i=None, j=None):
     '''
@@ -194,7 +223,8 @@ def random_banded(size, num_diags):
     Create quadratic banded sparse matrix of dimension 'size' with 'num_diags' diagonals
 
     '''
-    mat = scipy.sparse.diags([rng.uniform(0, 1, size=size) for i in range(num_diags)], range((-num_diags+1)//2, (num_diags+1)//2), shape=(size, size)).toarray()
+    mat = scipy.sparse.diags([rng.uniform(0, 1, size=size) for i in range(num_diags)],
+                             range((-num_diags+1)//2, (num_diags+1)//2), shape=(size, size)).toarray()
     return scipy.sparse.eye(size)+(mat+np.transpose(mat))/2
 
 
