@@ -55,11 +55,14 @@ class sparse(object):
         return '<sparse matrix of shape {} and sparsity {:.2f}>'.format(self.shape, self.sparsity)
 
     def __mul__(self, other):
-        # FIXME distinguish between mat-mat and mat-vec products. Or implement mat-vec in ldot
-        return self.ldot(other)
+        if type(other) != sparse:
+            # Matrix-Vector product
+            return self.vdot(other)
+        else:
+            # Matrix-Matrix product
+            return self.dot(other)
 
     def construct_CSR(self, array):
-        # TODO NEEDSDOC
         '''
         Author: Simon Glennemeier-Marke
 
@@ -104,8 +107,9 @@ class sparse(object):
 
     # TODO: Needs class methods for gaussian elimination etc...
 
-    def matvec(self, vec):
-        '''Author: Henrik Spielvogel
+    def vdot(self, vec: np.ndarray):
+        '''
+        Author: Henrik Spielvogel
 
         Calculates the matrix-vector product of a sparse matrix with `vec`.
 
@@ -117,7 +121,7 @@ class sparse(object):
 
         '''
 
-        n = self.INCOMING.shape[0]
+        n = self.shape[0]
         vec = vec if type(vec) == np.ndarray else np.array(vec)
         outvec = []
 
@@ -132,7 +136,7 @@ class sparse(object):
 
         return np.array(outvec)
 
-    def ldot(self, other):
+    def dot(self, other):
         # FIXME needs to be rightsided dot prod
         '''
         Author: Simon Glennemeier-Marke
@@ -140,24 +144,25 @@ class sparse(object):
         To avoid confusion about commutativity,
         use:
 
-        " `A` * `B` "
+        >>> A * B
 
-        `ldot` computes the leftsided dot product
-        > `A.ldot(B)` = " `B` * `A` "
+        `dot` computes the right sided dot product
+        > `A.dot(B)` = " `A` * `B` "
 
         Returns:
         --------
         > <class sparse> of multiplied matrices
         '''
         if type(other) != sparse:
-            raise TypeError('Argument has to be {}, not {}'.format(type(self), type(other)))
+            raise TypeError("Argument has to be {}, not {}".format(type(self), type(other)))
         if self.shape[1] != other.shape[0]:
-            raise AttributeError('Shapes do not match')
-        result = np.zeros((other.shape[0], self.shape[1]))
-        for i in range(1, other.shape[0]+1):
-            for j in range(1, self.shape[1]+1):
-                row = lookup(other, i=i)
-                col = lookup(self, j=j)
+            raise AttributeError(
+                'Shapes do not match {},{}'.format(self.shape, other.shape))
+        result = np.zeros((self.shape[0], other.shape[1]))
+        for i in range(1, self.shape[0]+1):
+            for j in range(1, other.shape[1]+1):
+                row = lookup(self, i=i)
+                col = lookup(other, j=j)
                 result[i-1, j-1] = sum([r*c for r, c in zip(row, col)])
         return sparse(result)
 
@@ -239,7 +244,7 @@ if __name__ == "__main__":
     # b = sparse(random_banded(N, 2))
     b = sparse(rng.integers(-5, 5, (N-3, N)))
     csp = a*b
-    cnp = np.dot(b.INCOMING, a.INCOMING)
+    cnp = np.dot(a.INCOMING, b.INCOMING)
     print(np.allclose(csp.INCOMING, cnp))
 
     # vector = rng.integers(-10, 10, N)
