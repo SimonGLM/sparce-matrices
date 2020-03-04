@@ -17,7 +17,7 @@ sp.sparse(array: np.ndarray):
 > The CSR format stores all values in a list and only the column index and where new rows begin.
 
 sp.random_banded(size: int, num_diags: int):
-> Creates, displays and returns a sparse `size`Ãƒâ€”`size` matrix which is banded.
+> Creates, displays and returns a sparse `size`x`size` matrix which is banded.
 > I.e. it only has non-zero values on num_diags centered diagonals.
 
 
