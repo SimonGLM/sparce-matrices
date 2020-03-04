@@ -24,10 +24,10 @@ sp.random_banded(size: int, num_diags: int):
 This library is part of a project done as an end-term assignment in the 'Scientific Programming'-course at the Justus-Liebig-University in Giessen, Germany.
 '''
 
-import numpy as np
-import scipy
-import scipy.sparse
 import matplotlib.pyplot as plt
+import scipy.sparse
+import scipy
+import numpy as np
 rng = np.random.default_rng()
 
 
@@ -46,10 +46,11 @@ class sparse(object):
     '''
 
     def __init__(self, array: np.ndarray):
-        self.INCOMING = array if (type(array) == np.ndarray) else np.asfarray(array)
-        self.sparsity = 1 - np.count_nonzero(self.INCOMING)/self.INCOMING.size
-        self.shape = self.INCOMING.shape
-        self._choose_scheme(self.INCOMING)
+        self.ARRAY = array if (type(array) == np.ndarray) else np.asfarray(array)
+        self.sparsity = 1 - np.count_nonzero(self.ARRAY)/self.ARRAY.size
+        self.shape = self.ARRAY.shape
+        self.T = lambda: sparse(self.ARRAY.T)
+        self._choose_scheme(self.ARRAY)
 
     def __repr__(self):
         return '<sparse matrix of shape {} and sparsity {:.2f}>'.format(self.shape, self.sparsity)
@@ -69,7 +70,7 @@ class sparse(object):
         Constructs a CSR form of a given array.
 
         Args:
-        > `INCOMING` :  sparse numpy array
+        > `ARRAY` :  sparse numpy array
 
         Returns:
         > self.CSR :  dict containing the CSR object
@@ -85,7 +86,7 @@ class sparse(object):
 
         return csr
 
-    def _choose_scheme(self, array):
+    def _choose_scheme(self, array: np.ndarray):
         # "_method" means python won't import this method with wildcard import "from lib import * "
         '''
         Author: Simon Glennemeier-Marke
@@ -137,7 +138,6 @@ class sparse(object):
         return np.array(outvec)
 
     def dot(self, other):
-        # FIXME needs to be rightsided dot prod
         '''
         Author: Simon Glennemeier-Marke
 
@@ -186,7 +186,7 @@ def lookup(array: sparse, i=None, j=None):
     --------
      >>> rng = np.random.default_rng()
      >>> a = sparse(rng.integers(0,4,(3,4)))
-     >>> a.INCOMING
+     >>> a.ARRAY
      array([[1, 2, 2, 0],
             [0, 0, 1, 2],
             [3, 0, 3, 0]])
@@ -244,15 +244,15 @@ if __name__ == "__main__":
     # b = sparse(random_banded(N, 2))
     b = sparse(rng.integers(-5, 5, (N-3, N)))
     csp = a*b
-    cnp = np.dot(a.INCOMING, b.INCOMING)
-    print(np.allclose(csp.INCOMING, cnp))
+    cnp = np.dot(a.ARRAY, b.ARRAY)
+    print(np.allclose(csp.ARRAY, cnp))
 
     # vector = rng.integers(-10, 10, N)
     # from timeit import default_timer as timer
     # t0 = timer()
     # b = a*vector
     # t1 = timer()
-    # c = np.dot(a.INCOMING, vector)
+    # c = np.dot(a.ARRAY, vector)
     # t2 = timer()
     # print(np.allclose(b, c))
     # print("matvec took {}s and numpy {}s".format(t1-t0, t2-t1))
