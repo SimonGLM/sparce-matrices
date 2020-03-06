@@ -39,7 +39,20 @@ class sparse(object):
     A sparse array object
     =====================
 
-    This object is the general sparse matrix object
+    This object is the general sparse matrix object.
+    It implements the 'Compressed Sparse Row' format, storing only non-zero values.
+
+    Sparse objects can be subscripted to ask for an element, a column vector and a row vector.
+
+    Subscripting:
+    -------------
+    >>> a = sparse([[1,2],[3,4]])
+    >>> a[1,1]
+    1
+    >>> a[None,1]
+    [1.0, 3.0]
+    >>> a[1,None]
+    [1.0, 2.0]
 
     Arguments:
     > array : np.ndarray of arbitrary size
@@ -62,6 +75,13 @@ class sparse(object):
         else:
             # Matrix-Matrix product
             return self.dot(other)
+
+    def __getitem__(self, item):
+        if not all([type(item[i]) == int or item[i] == None for i, el in enumerate(item)]):
+            raise TypeError('Argument has to be type int or None')
+        if len(item) > 2:
+            raise IndexError('Index out of range.')
+        return self.lookup(*item)
 
     def construct_CSR(self, array):
         '''
@@ -166,59 +186,58 @@ class sparse(object):
                 result[i-1, j-1] = sum([r*c for r, c in zip(row, col)])
         return sparse(result)
 
+    def lookup(self, i=None, j=None):
+        '''
+        Author: Simon Glennemeier-Marke
 
-def lookup(array: sparse, i=None, j=None):
-    '''
-    Author: Simon Glennemeier-Marke
+        General utility function for sparse arrays.
+        If `lookup` is called with only one of `i` or `j`, it will call recursively get
+        all elements of one row/column with index `i`/`j` and return a it as a list.
+        See examples.
 
-    General utility function for sparse arrays.
-    If `lookup` is called with only one of `i` or `j`, it will call recursively get
-    all elements of one row/column with index `i`/`j` and return a it as a list.
-    See examples.
+        Item subscribting is implemented through this method.
 
-    Arguments:
-    ----------
-    > `array`: Input array of <class sparse>
-    > `i`: Index of row
-    > `j`: Index of column
+        Arguments:
+        ----------
+        > `i`: Index of row
+        > `j`: Index of column
 
-    Examples
-    --------
-     >>> rng = np.random.default_rng()
-     >>> a = sparse(rng.integers(0,4,(3,4)))
-     >>> a.ARRAY
-     array([[1, 2, 2, 0],
-            [0, 0, 1, 2],
-            [3, 0, 3, 0]])
+        Examples
+        --------
+         >>> rng = np.random.default_rng()
+         >>> a = sparse(rng.integers(0,4,(3,4)))
+         >>> a.ARRAY
+         array([[1, 2, 2, 0],
+                [0, 0, 1, 2],
+                [3, 0, 3, 0]])
 
-     >>> lookup(a,i=1,j=2)
-     2
+         >>> a.lookup(i=1,j=2)
+         2
 
-     >>> lookup(a,i=1)
-     [1, 0, 3]
+         >>> a.lookup(i=1)
+         [1, 0, 3]
 
-     >>> lookup(a,j=3)
-     [3, 0, 3, 0]"
-    '''
+         >>> a.lookup(j=3)
+         [3, 0, 3, 0]"
+        '''
 
-    if i != None and j != None:
-        if i == 0 or j == 0:
-            raise IndexError('Indices count from 1')
-        i -= 1
-        j -= 1
-        array: sparse
-        slice_ = slice(array.CSR['IROW'][i], array.CSR['IROW'][i+1])
-        if j in array.CSR['JCOL'][slice_]:
-            j_index = array.CSR['IROW'][i]+array.CSR['JCOL'][slice_].index(j)
-            return array.CSR['AVAL'][j_index]
-        else:
-            return 0
-    if i != None and j == None:
-        # Retrun row at `i`
-        return [lookup(array, i, k) for k in range(1, array.shape[1]+1)]
-    if i == None and j != None:
-        # Return col at `JCOL`
-        return [lookup(array, k, j) for k in range(1, array.shape[0]+1)]
+        if i != None and j != None:
+            if i == 0 or j == 0:
+                raise IndexError('Indices count from 1.')
+            i -= 1
+            j -= 1
+            slice_ = slice(self.CSR['IROW'][i], self.CSR['IROW'][i+1])
+            if j in self.CSR['JCOL'][slice_]:
+                j_index = self.CSR['IROW'][i]+self.CSR['JCOL'][slice_].index(j)
+                return self.CSR['AVAL'][j_index]
+            else:
+                return 0
+        if i != None and j == None:
+            # Retrun row at `i`
+            return [self.lookup(i, k) for k in range(1, self.shape[1]+1)]
+        if i == None and j != None:
+            # Return col at `JCOL`
+            return [self.lookup(k, j) for k in range(1, self.shape[0]+1)]
 
 
 def random_banded(size, num_diags):
@@ -226,7 +245,7 @@ def random_banded(size, num_diags):
     '''
     Author: Simon Glennemeier-Marke
 
-    Create quadratic banded sparse matrix of dimension 'size' with 'num_diags' diagonals
+    Create quadratic banded sparse matrix of dimension `size` with `num_diags` diagonals
 
     '''
     mat = scipy.sparse.diags([rng.uniform(0, 1, size=size) for i in range(num_diags)],
@@ -240,6 +259,7 @@ if __name__ == "__main__":
     # a = sparse(np.eye(N))
     # a = sparse(random_banded(N, 2))
     a = sparse(rng.integers(-10, 10, (N, N-3)))
+    a[1, 2]
     # b = sparse(np.eye(N))
     # b = sparse(random_banded(N, 2))
     b = sparse(rng.integers(-5, 5, (N-3, N)))
