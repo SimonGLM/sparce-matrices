@@ -292,26 +292,13 @@ if __name__ == "__main__":
     # a = sparse(random_banded(N, 2))
     # a = sparse(rng.integers(-10, 10, (N, N-3)))
     # a = scipy.sparse.rand(50, 50, 0.2)
-    print(a[1, 2])
-    a[1, 2] = 4
-    print(a[1, 2])
-    print(a[4, 1])
-    a[4, 1] = 4
-    # b = sparse(np.eye(N))
-    # b = sparse(random_banded(N, 2))
-    b = sparse(rng.integers(-5, 5, (N-3, N)))
-    csp = a*b
-    cnp = np.dot(a.ARRAY, b.ARRAY)
-    print(np.allclose(csp.ARRAY, cnp))
 
-    # vector = rng.integers(-10, 10, N)
-    # from timeit import default_timer as timer
-    # t0 = timer()
-    # b = a*vector
-    # t1 = timer()
-    # c = np.dot(a.ARRAY, vector)
-    # t2 = timer()
-    # print(np.allclose(b, c))
-    # print("matvec took {}s and numpy {}s".format(t1-t0, t2-t1))
+    b = sparse(np.eye(N))
+    # b = sparse(random_banded(N, 2))
+    # b = sparse(rng.integers(-5, 5, (N-3, N)))
+    # b = scipy.sparse.rand(50, 50, 0.2)
+    csp = a*b
+    cnp = np.dot(a.toarray(), b.toarray())
+    print(np.allclose(csp.toarray(), cnp))
 
     pass
