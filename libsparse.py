@@ -21,7 +21,7 @@ sp.random_banded(size: int, num_diags: int):
 > I.e. it only has non-zero values on num_diags centered diagonals.
 
 
-This library is part of a project done as an end-term assignment in the 'Scientific Programming'-course at the Justus-Liebig-University in Giessen, Germany.
+This library is part of a project done as an end-term assignment in the 'Scientific Programming' course at the Justus-Liebig-University in Giessen, Germany.
 '''
 
 import matplotlib.pyplot as plt
@@ -62,6 +62,7 @@ class sparse(object):
         self.ARRAY = array if (type(array) == np.ndarray) else np.asfarray(array)
         self.sparsity = 1 - np.count_nonzero(self.ARRAY)/self.ARRAY.size
         self.shape = self.ARRAY.shape
+        self.quadratic = bool(self.shape[0] == self.shape[1])
         self.T = lambda: sparse(self.ARRAY.T)
         self._choose_scheme(self.ARRAY)
 
@@ -76,12 +77,88 @@ class sparse(object):
             # Matrix-Matrix product
             return self.dot(other)
 
-    def __getitem__(self, item):
-        if not all([type(item[i]) == int or item[i] == None for i, el in enumerate(item)]):
+    def __getitem__(self, key):
+        '''
+        Author: Simon Glennemeier-Marke
+
+        `__getitem__` is called using subscripting.
+
+        If either the first or second index is `None`, we return the whole vector of that index.
+
+        Examples:
+        ---------
+        >>> a = sp.sparse([[1,2],[3,4]])
+        >>> a[1,1]
+        1.0
+        >>> a[2,1]
+        3.0
+        >>> a[None,2]
+        [2.0, 4.0]
+        '''
+        if not all([type(key[i]) == int or key[i] == None for i, el in enumerate(key)]):
             raise TypeError('Argument has to be type int or None')
-        if len(item) > 2:
+        if len(key) > 2:
             raise IndexError('Index out of range.')
-        return self.lookup(*item)
+        i, j = key
+        if i != None and j != None:
+            if i == 0 or j == 0:
+                raise IndexError('Indices count from 1.')
+            i -= 1
+            j -= 1
+            slice_ = slice(self.CSR['IROW'][i], self.CSR['IROW'][i+1])
+            if j in self.CSR['JCOL'][slice_]:
+                j_index = self.CSR['IROW'][i]+self.CSR['JCOL'][slice_].index(j)
+                return self.CSR['AVAL'][j_index]
+            else:
+                return 0
+        if i != None and j == None:
+            # Retrun row at `i`
+            return [self[i, k] for k in range(1, self.shape[1]+1)]
+        if i == None and j != None:
+            # Return col at `JCOL`
+            return [self[k, j] for k in range(1, self.shape[0]+1)]
+
+    def __setitem__(self, key, value):
+        '''
+        Author: Simon Glennemeier-Marke
+
+        `__setitem__`  is called using subscripting and assignment
+
+        Arguments:
+        ----------
+        > `key` : tuple, Array indices where to set the new value (row major order)
+
+        > `value` : int or float, Value to assign the specified element to
+
+        Examples:
+        ---------
+        >>> a = sparse([[1,2],[3,4]])
+        >>> a[1,1] = 6
+        >>> a.ARRAY
+        array([[6.0, 2.0]
+               [3.0, 4.0]])
+        '''
+        if type(value) != int and type(value) != float:
+            raise TypeError('Value is of type {}, but needs to be int or float.'.format(type(value)))
+        if type(value) == int:
+            value = float(value)
+        if len(key) != 2:
+            raise IndexError('Index has to be tuple.')
+        i, j = key
+        if i == 0 or j == 0:
+            raise IndexError('Indices count from 1.')
+        i -= 1
+        j -= 1
+        slice_ = slice(self.CSR['IROW'][i], self.CSR['IROW'][i+1])
+        if j in self.CSR['JCOL'][slice_]:  # Value exists, just needs to be overwritten
+            index = self.CSR['IROW'][i]+self.CSR['JCOL'][slice_].index(j)
+            self.CSR['AVAL'][index] = value
+        else:  # Value doesn't exist, needs to be inserted into CSR
+            new_index = self.CSR['IROW'][i]+j
+            self.CSR['AVAL'].insert(new_index, value)
+            self.CSR['JCOL'].insert(new_index, j)
+            for k in self.CSR['IROW'][i+1:]:
+                self.CSR['IROW'][k] += 1
 
     def construct_CSR(self, array):
         '''
@@ -177,67 +254,19 @@ class sparse(object):
             raise TypeError("Argument has to be {}, not {}".format(type(self), type(other)))
         if self.shape[1] != other.shape[0]:
             raise AttributeError(
-                'Shapes do not match {},{}'.format(self.shape, other.shape))
+                'Shapes do not match {}, {}'.format(self.shape, other.shape))
         result = np.zeros((self.shape[0], other.shape[1]))
         for i in range(1, self.shape[0]+1):
             for j in range(1, other.shape[1]+1):
-                row = lookup(self, i=i)
-                col = lookup(other, j=j)
+                row = self[i, None]
+                col = other[None, j]
                 result[i-1, j-1] = sum([r*c for r, c in zip(row, col)])
         return sparse(result)
 
-    def lookup(self, i=None, j=None):
-        '''
-        Author: Simon Glennemeier-Marke
+    def LU_decomp(self):
+        '''Author: Simon Glennemeier-Marke'''
 
-        General utility function for sparse arrays.
-        If `lookup` is called with only one of `i` or `j`, it will call recursively get
-        all elements of one row/column with index `i`/`j` and return a it as a list.
-        See examples.
-
-        Item subscribting is implemented through this method.
-
-        Arguments:
-        ----------
-        > `i`: Index of row
-        > `j`: Index of column
-
-        Examples
-        --------
-         >>> rng = np.random.default_rng()
-         >>> a = sparse(rng.integers(0,4,(3,4)))
-         >>> a.ARRAY
-         array([[1, 2, 2, 0],
-                [0, 0, 1, 2],
-                [3, 0, 3, 0]])
-
-         >>> a.lookup(i=1,j=2)
-         2
-
-         >>> a.lookup(i=1)
-         [1, 0, 3]
-
-         >>> a.lookup(j=3)
-         [3, 0, 3, 0]"
-        '''
-
-        if i != None and j != None:
-            if i == 0 or j == 0:
-                raise IndexError('Indices count from 1.')
-            i -= 1
-            j -= 1
-            slice_ = slice(self.CSR['IROW'][i], self.CSR['IROW'][i+1])
-            if j in self.CSR['JCOL'][slice_]:
-                j_index = self.CSR['IROW'][i]+self.CSR['JCOL'][slice_].index(j)
-                return self.CSR['AVAL'][j_index]
-            else:
-                return 0
-        if i != None and j == None:
-            # Retrun row at `i`
-            return [self.lookup(i, k) for k in range(1, self.shape[1]+1)]
-        if i == None and j != None:
-            # Return col at `JCOL`
-            return [self.lookup(k, j) for k in range(1, self.shape[0]+1)]
+        raise NotImplementedError
 
 
 def random_banded(size, num_diags):
@@ -245,7 +274,7 @@ def random_banded(size, num_diags):
     '''
     Author: Simon Glennemeier-Marke
 
-    Create quadratic banded sparse matrix of dimension `size` with `num_diags` diagonals
+    Create symmetric banded matrix of dimension `size` with `num_diags` diagonals.
 
     '''
     mat = scipy.sparse.diags([rng.uniform(0, 1, size=size) for i in range(num_diags)],
@@ -256,10 +285,15 @@ def random_banded(size, num_diags):
 if __name__ == "__main__":
     rng: np.random.Generator  # hint for IntelliSense
     N = 10
-    # a = sparse(np.eye(N))
+    a = sparse(np.eye(N))
     # a = sparse(random_banded(N, 2))
-    a = sparse(rng.integers(-10, 10, (N, N-3)))
-    a[1, 2]
+    # a = sparse(rng.integers(-10, 10, (N, N-3)))
+    # a = scipy.sparse.rand(50, 50, 0.2)
+    print(a[1, 2])
+    a[1, 2] = 4
+    print(a[1, 2])
+    print(a[4, 1])
+    a[4, 1] = 4
     # b = sparse(np.eye(N))
     # b = sparse(random_banded(N, 2))
     b = sparse(rng.integers(-5, 5, (N-3, N)))
