@@ -59,12 +59,13 @@ class sparse(object):
     '''
 
     def __init__(self, array: np.ndarray):
-        self.ARRAY = array if (type(array) == np.ndarray) else np.asfarray(array)
-        self.sparsity = 1 - np.count_nonzero(self.ARRAY)/self.ARRAY.size
-        self.shape = self.ARRAY.shape
+        temp = array if (type(array) == np.ndarray) else np.asfarray(array)
+        self.sparsity = 1 - np.count_nonzero(temp)/temp.size
+        self.shape = temp.shape
         self.quadratic = bool(self.shape[0] == self.shape[1])
         self.T = lambda: sparse(self.ARRAY.T)
-        self._choose_scheme(self.ARRAY)
+        self._choose_scheme(temp)
+        del temp
 
     def __repr__(self):
         return '<sparse matrix of shape {} and sparsity {:.2f}>'.format(self.shape, self.sparsity)
@@ -183,6 +184,13 @@ class sparse(object):
 
         return csr
 
+    def toarray(self):
+        array = np.zeros(self.shape)
+        for i, row in enumerate(array):
+            for j, el in enumerate(row):
+                array[i][j] = self[i+1, j+1]
+        return array
+
     def _choose_scheme(self, array: np.ndarray):
         # "_method" means python won't import this method with wildcard import "from lib import * "
         '''
@@ -262,11 +270,6 @@ class sparse(object):
                 col = other[None, j]
                 result[i-1, j-1] = sum([r*c for r, c in zip(row, col)])
         return sparse(result)
-
-    def LU_decomp(self):
-        '''Author: Simon Glennemeier-Marke'''
-
-        raise NotImplementedError
 
 
 def random_banded(size, num_diags):
