@@ -29,7 +29,7 @@ import scipy.sparse
 import scipy
 import numpy as np
 rng = np.random.default_rng()
-
+np.set_printoptions(edgeitems=8,linewidth=180)
 
 class sparse(object):
     # TODO NEEDSDOC
@@ -66,6 +66,7 @@ class sparse(object):
         self.T = lambda: sparse(self.ARRAY.T)
         self._choose_scheme(temp)
         del temp
+        self.N = self.shape[0] if self.quadratic else None
 
     def __repr__(self):
         return '<sparse matrix of shape {} and sparsity {:.2f}>'.format(self.shape, self.sparsity)
@@ -158,7 +159,7 @@ class sparse(object):
             new_index = self.CSR['IROW'][i]+j
             self.CSR['AVAL'].insert(new_index, value)
             self.CSR['JCOL'].insert(new_index, j)
-            for k in self.CSR['IROW'][i+1:]:
+            for k in range(i+1, len(self.CSR['IROW'])):
                 self.CSR['IROW'][k] += 1
 
     def construct_CSR(self, array):
@@ -168,7 +169,7 @@ class sparse(object):
         Constructs a CSR form of a given array.
 
         Args:
-        > `ARRAY` :  sparse numpy array
+        > `array` :  sparse numpy array
 
         Returns:
         > self.CSR :  dict containing the CSR object
@@ -188,7 +189,7 @@ class sparse(object):
         array = np.zeros(self.shape)
         for i, row in enumerate(array):
             for j, el in enumerate(row):
-                array[i][j] = self[i+1, j+1]
+                array[i][j] = self[i+1, j+1] 
         return array
 
     def _choose_scheme(self, array: np.ndarray):
@@ -271,6 +272,19 @@ class sparse(object):
                 result[i-1, j-1] = sum([r*c for r, c in zip(row, col)])
         return sparse(result)
 
+    def LU_decomp(self):
+        if not self.quadratic:
+            raise AssertionError('LU decomposition is not possible for non-quadratic matrices.')
+        import copy
+        L = sparse(np.eye(self.N))
+        U = copy.deepcopy(self)
+        for i in range(1, self.N):
+            for k in range(i+1, N):
+                L[k, i] = float(U[k, i] / U[i, i])
+                for j in range(i, N+1):
+                    U[k, j] = float(U[k, j]-L[k, i]*U[i, j])
+        return L, U
+
 
 def random_banded(size, num_diags):
     # TODO NEEDSDOC
@@ -288,17 +302,18 @@ def random_banded(size, num_diags):
 if __name__ == "__main__":
     rng: np.random.Generator  # hint for IntelliSense
     N = 10
-    a = sparse(np.eye(N))
+    # a = sparse(np.eye(N))
     # a = sparse(random_banded(N, 2))
-    # a = sparse(rng.integers(-10, 10, (N, N-3)))
+    a = sparse(rng.integers(-10, 10, (N, N)))
     # a = scipy.sparse.rand(50, 50, 0.2)
 
-    b = sparse(np.eye(N))
+    # b = sparse(np.eye(N))
     # b = sparse(random_banded(N, 2))
     # b = sparse(rng.integers(-5, 5, (N-3, N)))
     # b = scipy.sparse.rand(50, 50, 0.2)
-    csp = a*b
-    cnp = np.dot(a.toarray(), b.toarray())
-    print(np.allclose(csp.toarray(), cnp))
+    # csp = a*b
+    # cnp = np.dot(a.toarray(), b.toarray())
+    # print(np.allclose(csp.toarray(), cnp))
+    L, U = a.LU_decomp()
 
     pass
