@@ -203,10 +203,22 @@ class sparse(object):
         return csr
 
     def toarray(self):
-        array = np.zeros(self.shape)
-        for i, row in enumerate(array):
-            for j, el in enumerate(row):
-                array[i][j] = self[i+1, j+1] 
+        '''
+        Author: Simon Glennemeier-Marke
+
+        Converts sparse object to numpy array.
+
+        Returns:
+        --------
+        > `np.ndarray` : Fullsize array of self
+        '''
+        array = np.array([])
+        for i in range(len(self.CSR['IROW'])-1):
+            row = np.zeros(self.N)
+            slice_ = slice(self.CSR['IROW'][i], self.CSR['IROW'][i+1])
+            for j, a in zip(self.CSR['JCOL'][slice_], self.CSR['AVAL'][slice_]):
+                row[int(j)] = a
+            array = np.append(array, row)
         return array
 
     def transpose(self):
