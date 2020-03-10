@@ -186,6 +186,22 @@ class sparse(object):
 
         return csr
 
+    def construct_CSR_fast(self, array):
+        # TODO NEEDSDOC
+        '''Author: Simon Glennemeier-Marke'''
+        array: np.ndarray
+        jcol = np.array([])
+        aval = np.array([])
+        irow = np.array([0])
+        for row in array:
+            row: np.ndarray
+            indices = np.nonzero(row)[0]
+            jcol = np.append(jcol, indices)
+            aval = np.append(aval, np.take(row, indices))
+            irow = np.append(irow, len(aval))
+        csr = {'AVAL': list(aval), 'JCOL': list(jcol), 'IROW': list(irow)}
+        return csr
+
     def toarray(self):
         array = np.zeros(self.shape)
         for i, row in enumerate(array):
@@ -209,10 +225,12 @@ class sparse(object):
         > `array` : np.ndarray
         '''
         if 1 > self.sparsity >= .5:
-            self.CSR = self.construct_CSR(array)
+            # self.CSR = self.construct_CSR(array)
+            self.CSR = self.construct_CSR_fast(array)
         elif .5 > self.sparsity >= 0:
             print('NotImplementedError: falling back to implemented methods')
-            self.CSR = self.construct_CSR(array)
+            # self.CSR = self.construct_CSR(array)
+            self.CSR = self.construct_CSR_fast(array)
         else:
             raise ValueError('Sparisty should be in half-open interval [0,1), but is {:.3f}'.format(self.sparsity))
 
