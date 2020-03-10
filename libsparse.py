@@ -81,6 +81,7 @@ class sparse(object):
             return self.dot(other)
 
     def __getitem__(self, key):
+        # FIXME gotta be fasta!
         '''
         Author: Simon Glennemeier-Marke
 
@@ -122,6 +123,7 @@ class sparse(object):
             return [self[k, j] for k in range(1, self.shape[0]+1)]
 
     def __setitem__(self, key, value):
+        #  FIXME gotta be fasta!
         '''
         Author: Simon Glennemeier-Marke
 
@@ -187,8 +189,22 @@ class sparse(object):
         return csr
 
     def construct_CSR_fast(self, array):
-        # TODO NEEDSDOC
-        '''Author: Simon Glennemeier-Marke'''
+        '''
+        Author: Simon Glennemeier-Marke
+
+        Faster version of construct_CSR.
+
+        Regular implementation is O(n^2), where as this is O(n).
+
+        This is achieved by only iterating over the rows and filling it all at once.
+        In addition, we now use numpy methods which are a lot faster.
+
+        Args:
+        > `array` :  sparse numpy array
+
+        Returns:
+        > self.CSR :  dict containing the CSR object
+        '''
         array: np.ndarray
         jcol = np.array([])
         aval = np.array([])
@@ -222,8 +238,15 @@ class sparse(object):
         return array
 
     def transpose(self):
-        # TODO NEEDSDOC
-        '''Author: Simon Glennemeier-Marke'''
+        '''
+        Author: Simon Glennemeier-Marke
+
+        Return the transposed version of self.
+
+        Returns:
+        --------
+        > `sp.sparse` : Transposed sparse object of self
+        '''
         return sparse(np.transpose(self.toarray()))
 
     def _choose_scheme(self, array: np.ndarray):
@@ -324,7 +347,6 @@ class sparse(object):
 
 
 def random_banded(size, num_diags):
-    # TODO NEEDSDOC
     '''
     Author: Simon Glennemeier-Marke
 
