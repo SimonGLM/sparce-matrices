@@ -65,6 +65,7 @@ class sparse(object):
         self.quadratic = bool(self.shape[0] == self.shape[1])
         self.T = lambda: sparse(self.ARRAY.T)
         self._choose_scheme(temp)
+        self.T = self.transpose
         del temp
         self.N = self.shape[0] if self.quadratic else None
 
@@ -191,6 +192,11 @@ class sparse(object):
             for j, el in enumerate(row):
                 array[i][j] = self[i+1, j+1] 
         return array
+
+    def transpose(self):
+        # TODO NEEDSDOC
+        '''Author: Simon Glennemeier-Marke'''
+        return sparse(np.transpose(self.toarray()))
 
     def _choose_scheme(self, array: np.ndarray):
         # "_method" means python won't import this method with wildcard import "from lib import * "
