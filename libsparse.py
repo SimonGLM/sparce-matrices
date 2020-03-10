@@ -29,7 +29,8 @@ import scipy.sparse
 import scipy
 import numpy as np
 rng = np.random.default_rng()
-np.set_printoptions(edgeitems=8,linewidth=180)
+np.set_printoptions(edgeitems=8, linewidth=180)
+
 
 class sparse(object):
     # TODO NEEDSDOC
@@ -58,14 +59,13 @@ class sparse(object):
     > array : np.ndarray of arbitrary size
     '''
 
-    def __init__(self, array: np.ndarray):
+    def __init__(self, array):
         temp = array if (type(array) == np.ndarray) else np.asfarray(array)
         self.sparsity = 1 - np.count_nonzero(temp)/temp.size
         self.shape = temp.shape
         self.quadratic = bool(self.shape[0] == self.shape[1])
-        self.T = lambda: sparse(self.ARRAY.T)
-        self._choose_scheme(temp)
         self.T = self.transpose
+        self._choose_scheme(temp)
         del temp
         self.N = self.shape[0] if self.quadratic else None
 
@@ -137,7 +137,7 @@ class sparse(object):
         ---------
         >>> a = sparse([[1,2],[3,4]])
         >>> a[1,1] = 6
-        >>> a.ARRAY
+        >>> a.toarray()
         array([[6.0, 2.0]
                [3.0, 4.0]])
         '''
@@ -313,13 +313,14 @@ class sparse(object):
             raise AssertionError('LU decomposition is not possible for non-quadratic matrices.')
         import copy
         L = sparse(np.eye(self.N))
-        U = copy.deepcopy(self)
+        U = np.zeros(self.shape)
+        # U = copy.deepcopy(self)
         for i in range(1, self.N):
-            for k in range(i+1, N):
-                L[k, i] = float(U[k, i] / U[i, i])
-                for j in range(i, N+1):
-                    U[k, j] = float(U[k, j]-L[k, i]*U[i, j])
-        return L, U
+            for k in range(i+1, self.N):
+                L[k, i] = float(self[k, i] / self[i, i])
+                for j in range(i, self.N+1):
+                    U[k-1, j-1] = float(self[k, j] - L[k, i] * self[i, j])
+        return L, sparse(U)
 
 
 def random_banded(size, num_diags):
@@ -339,17 +340,12 @@ if __name__ == "__main__":
     rng: np.random.Generator  # hint for IntelliSense
     N = 10
     # a = sparse(np.eye(N))
-    # a = sparse(random_banded(N, 2))
-    a = sparse(rng.integers(-10, 10, (N, N)))
-    # a = scipy.sparse.rand(50, 50, 0.2)
-
-    # b = sparse(np.eye(N))
-    # b = sparse(random_banded(N, 2))
-    # b = sparse(rng.integers(-5, 5, (N-3, N)))
-    # b = scipy.sparse.rand(50, 50, 0.2)
-    # csp = a*b
-    # cnp = np.dot(a.toarray(), b.toarray())
-    # print(np.allclose(csp.toarray(), cnp))
-    L, U = a.LU_decomp()
+    a = sparse(random_banded(N, 2))
+    # a = sparse(rng.integers(-10, 10, (N, N)))
+    # a = scipy.sparse.rand(50, 50, 0.2).toarray()
+    for i in range(100):
+        L, U = a.LU_decomp()
+        L, U = a.LU_decomp_fast()
+    a.toarray()
 
     pass
