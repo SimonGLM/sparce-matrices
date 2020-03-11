@@ -25,6 +25,7 @@ This library is part of a project done as an end-term assignment in the 'Scienti
 '''
 
 import matplotlib.pyplot as plt
+import scipy.sparse.linalg
 import scipy.sparse
 import scipy
 import numpy as np
@@ -241,6 +242,23 @@ class sparse(object):
         > `sp.sparse` : Transposed sparse object of self
         '''
         return sparse(np.transpose(self.toarray()))
+
+    def check_posdef(self):
+        '''
+        Author: Henrik Spielvogel
+
+        Checks if matrix is positive definite.
+
+
+        Returns:
+        --------
+        > `bool` : True if self is positive definite
+        '''
+        evals = scipy.sparse.linalg.eigs(self.toarray())
+        return np.alltrue(evals[0] > 0)
+    
+
+        
 
     def _choose_scheme(self, array: np.ndarray):
         # "_method" means python won't import this method with wildcard import "from lib import * "
