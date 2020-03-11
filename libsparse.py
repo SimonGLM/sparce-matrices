@@ -61,7 +61,7 @@ class sparse(object):
     '''
 
     def __init__(self, array):
-        temp = array if (type(array) == np.ndarray) else np.asfarray(array)
+        temp = array if (type(array) == np.ndarray) else np.array(array)
         self.sparsity = 1 - np.count_nonzero(temp)/temp.size
         self.shape = temp.shape
         self.quadratic = bool(self.shape[0] == self.shape[1])
@@ -282,7 +282,6 @@ class sparse(object):
 
         pass
 
-    # TODO: Needs class methods for gaussian elimination etc...
 
     def vdot(self, vec: np.ndarray):
         '''
@@ -380,16 +379,45 @@ def random_banded(size, num_diags):
     return scipy.sparse.eye(size)+(mat+np.transpose(mat))/2
 
 
+class linsys(object):
+    '''
+    Author: Henrik Spielvogel
+
+    Arguments:
+    ----------
+    > `A` : Sparse array
+    > `b` : 1D-list or np.ndarray 
+    '''
+
+    def __init__(self, A: sparse,b,x):
+        A:sparse
+        self.A = A
+        self.b = b
+        self.x = x
+    
+    def funktion(self):
+        mat = self.A
+        return mat.sparsity
+
 if __name__ == "__main__":
     rng: np.random.Generator  # hint for IntelliSense
     N = 10
     # a = sparse(np.eye(N))
     a = sparse(random_banded(N, 2))
-    # a = sparse(rng.integers(-10, 10, (N, N)))
-    # a = scipy.sparse.rand(50, 50, 0.2).toarray()
-    for i in range(100):
-        L, U = a.LU_decomp()
-        L, U = a.LU_decomp_fast()
-    a.toarray()
-
+    # a = sparse(scipy.sparse.rand(50, 50, 0.1).toarray())
+    # a = sparse([[1,2,0,0,0],[0,3,3,0,0],[0,0,69,-1,0],[0,0,0,0,1],[0,0,0,0,88]])
+    # print(a.check_posdef())
+    # a.show()
+    print(a)
+    a=linsys(a,[],[])
+    print(a.funktion())
     pass
+
+
+''' 
+TODO Tasks:
+  > LU-Decomp for dense
+  > CG-Method for dense and sparse
+  > Gaussian elimination 
+
+'''
