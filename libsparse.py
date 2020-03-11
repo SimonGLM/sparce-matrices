@@ -222,20 +222,13 @@ class sparse(object):
         '''
         Author: Simon Glennemeier-Marke
 
-        Converts sparse object to numpy array.
+        Converts sparse object to numpy array using scipy sparse methods
 
         Returns:
         --------
         > `np.ndarray` : Fullsize array of self
         '''
-        array = np.array([])
-        for i in range(len(self.CSR['IROW'])-1):
-            row = np.zeros(self.N)
-            slice_ = slice(self.CSR['IROW'][i], self.CSR['IROW'][i+1])
-            for j, a in zip(self.CSR['JCOL'][slice_], self.CSR['AVAL'][slice_]):
-                row[int(j)] = a
-            array = np.append(array, row)
-        return array
+        return scipy.sparse.csr_matrix((self.CSR['AVAL'], self.CSR['JCOL'], self.CSR['IROW'])).toarray()
 
     def transpose(self):
         '''
