@@ -356,6 +356,17 @@ class sparse(object):
                     U[k-1, j-1] = float(self[k, j] - L[k, i] * self[i, j])
         return L, sparse(U)
 
+    def show(self):
+        '''
+        Author: Simon Glennemeier-Marke
+        '''
+        data=self.toarray()
+        fig = plt.figure()
+        ax = fig.add_subplot(111)
+        cax = ax.matshow(data, interpolation='nearest')
+        fig.colorbar(cax)
+        plt.show()
+
 
 def random_banded(size, num_diags):
     '''
