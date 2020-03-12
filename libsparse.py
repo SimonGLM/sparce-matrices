@@ -6,7 +6,7 @@ This library implements sparse matrices.
 `import libsparse as sp`
 
 
-Sparse matricies are matricies which have relativley few non-zero entries.
+Sparse matrices are matrices which have relatively few non-zero entries.
 
 Therefore it is inefficient to store them as a complete array object.
 
@@ -179,7 +179,7 @@ class sparse(object):
         > self.CSR :  dict containing the CSR object
         '''
         csr = {'AVAL': [], 'JCOL': [], 'IROW': [0]}
-        for j, col in enumerate(array):
+        for _, col in enumerate(array):
             for i, el in enumerate(col):
                 if el != 0:
                     csr['AVAL'].append(el)
@@ -256,9 +256,6 @@ class sparse(object):
         '''
         evals = scipy.sparse.linalg.eigs(self.toarray())
         return np.alltrue(evals[0] > 0)
-    
-
-        
 
     def _choose_scheme(self, array: np.ndarray):
         # "_method" means python won't import this method with wildcard import "from lib import * "
@@ -278,10 +275,9 @@ class sparse(object):
             # self.CSR = self.construct_CSR(array)
             self.CSR = self.construct_CSR_fast(array)
         else:
-            raise ValueError('Sparisty should be in half-open interval [0,1), but is {:.3f}'.format(self.sparsity))
+            raise ValueError('Sparsity should be in half-open interval [0,1), but is {:.3f}'.format(self.sparsity))
 
         pass
-
 
     def vdot(self, vec: np.ndarray):
         '''
@@ -341,7 +337,10 @@ class sparse(object):
                 result[i-1, j-1] = sum([r*c for r, c in zip(row, col)])
         return sparse(result)
 
-    def LU_decomp(self):
+    def LU_decomp(self, **kwargs):
+        if 'force' not in kwargs.keys() or kwargs['force'] != True:
+            warning = "LU-decomposition is not to be used on sparse matrices.\nImplementing was only necessary for dense matrices.\n\nRuntime of this function is very slow due to an inefficient algorithm. O(n^3)\n\nTo silence this warning this warning use: `LU_decomp(force=True)`"
+            raise DeprecationWarning(warning)
         if not self.quadratic:
             raise AssertionError('LU decomposition is not possible for non-quadratic matrices.')
         import copy
@@ -359,7 +358,7 @@ class sparse(object):
         '''
         Author: Simon Glennemeier-Marke
         '''
-        data=self.toarray()
+        data = self.toarray()
         fig = plt.figure()
         ax = fig.add_subplot(111)
         cax = ax.matshow(data, interpolation='nearest')
@@ -379,29 +378,35 @@ def random_banded(size, num_diags):
     return scipy.sparse.eye(size)+(mat+np.transpose(mat))/2
 
 
+
+class dense(np.ndarray):
+    def __init__(self):
+        super().__init__()
+
+
 class linsys(object):
     '''
     Author: Henrik Spielvogel
-    
+
     A linear system of the form Ax=b
     ================================
-    
+
     This object creates linear systems of equations of the form Ax=b.
     It implements different methods for solving these systems considering the sparsity of the given matrix A.
 
     Arguments:
     ----------
     > `A` : np.ndarray
-    > `b` : 1D-list or np.ndarray 
+    > `b` : 1D-list or np.ndarray
     '''
 
-    def __init__(self, A, b):        
+    def __init__(self, A, b):
         self.matrix = A if (type(A) == np.ndarray) else np.array(A)
         self.target_vector = b if (type(b) == np.ndarray) else np.array(b)
         self.shape = A.shape
         self.N = A.shape[0]
-        
-    def __repr__(self):        
+
+    def __repr__(self):
         return 'matrix: \n{}\ntarget vector: \n{}'.format(self.matrix, self.target_vector)
     
     def LU_solve(self):
@@ -451,22 +456,19 @@ class linsys(object):
         if sparse:
             # needs routine for solving sparse systems
             pass
-        else:          
+        else:
             if method == 'scipy':
                 sol = scipy.linalg.solve(mat, vec)
             elif method == 'LU':  
                 sol = self.LU_solve()
                 
         return sol
-        
-
-
 
 
 if __name__ == "__main__":
     rng: np.random.Generator  # hint for IntelliSense
     N = 100
-    
+
     mat1 = A = np.array([[-3,  1, -1,  0, -1],
               [ 0,  1,  0,  1,  0], 
               [-1, -1, -3, -1,  0],
@@ -482,14 +484,14 @@ if __name__ == "__main__":
     sol1 = sys.solve(method = 'scipy')
     print(sol)
     print(sol1)
-    print(np.allclose(sol,sol1))
+    print(np.allclose(sol, sol1))
 
     pass
 
 
-''' 
+'''
 TODO Tasks:
   > CG-Method for dense and sparse
-  > Gaussian elimination 
+  > Gaussian elimination
 
 '''
