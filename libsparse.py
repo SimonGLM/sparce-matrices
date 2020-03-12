@@ -427,6 +427,7 @@ class linsys(object):
     def solve(self, sparse = False, method = 'scipy'):  
         mat = self.matrix 
         vec = self.target_vector   
+        
         if sparse:
             # needs routine for solving sparse systems
             pass
@@ -436,7 +437,10 @@ class linsys(object):
             elif method == 'LU':    
                 L = np.eye(self.N)
                 U = np.zeros(self.shape)
+                y = np.zeros_like(vec)
+                sol = y
                 
+                # LU-Decomposition
                 for i in range(self.N):
                     for k in range(i, self.N):
                         val = 0
@@ -448,9 +452,13 @@ class linsys(object):
                         for j in range(i):
                             val += L[k][j] * U[j][i]
                         L[k][i] = (mat[k][i] - val)/U[i][i]
-                        
-                sol = (L, U)
-    
+                
+                # forward substitution
+                for i in range(self.N):
+                    y[i] = (vec[i] - y.dot(L[i]))/L[i][i]
+                # back substitution
+                for i in range(self.N, 0, -1):
+                    sol[i-1] = (y[i-1] - U[i-1, i:].dot(sol[i:])) / U[i-1, i-1]
                         
         return sol
         
@@ -460,19 +468,7 @@ class linsys(object):
 
 if __name__ == "__main__":
     rng: np.random.Generator  # hint for IntelliSense
-    N = 10
-    # a = sparse(np.eye(N))
-    # a = sparse(random_banded(N, 2))
-    # a = sparse(scipy.sparse.rand(50, 50, 0.1).toarray())
-    # a = sparse([[1,2,0,0,0],[0,3,3,0,0],[0,0,69,-1,0],[0,0,0,0,1],[0,0,0,0,88]])
-    # print(a.check_posdef())
-    # a.show()
-    
-    # mat = [[1,0,0,0,0],[0,3,0,0,0],[0,0,0,-1,0],[0,0,0,2,0],[0,0,0,0,88]]
-    # vec = [1,2,3,4,5]
-    
-    # mat = random_banded(N, 2)
-    # vec = np.random.rand(N)
+    N = 100
     
     mat1 = A = np.array([[-3,  1, -1,  0, -1],
               [ 0,  1,  0,  1,  0], 
@@ -482,12 +478,15 @@ if __name__ == "__main__":
     
     vec = np.array([-1, -2, 5, -2, -2], dtype=np.float_)
 
-    sys = linsys(mat1,vec)
-    sol= sys.solve(method = 'LU')
-    print(sol[0])
-    print(sol[1])
+    mat2 = random_banded(N, 100)
+    vec2 = np.random.rand(N)
     
-    print(np.allclose(sol[0].dot(sol[1]), mat1))
+    sys = linsys(mat2,vec2)
+    sol= sys.solve(method = 'LU')
+    sol1 = sys.solve(method = 'scipy')
+    print(sol)
+    print(sol1)
+    print(np.allclose(sol,sol1))
 
     pass
 
