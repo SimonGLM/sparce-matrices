@@ -341,7 +341,10 @@ class sparse(object):
                 result[i-1, j-1] = sum([r*c for r, c in zip(row, col)])
         return sparse(result)
 
-    def LU_decomp(self):
+    def LU_decomp(self, **kwargs):
+        if 'force' not in kwargs.keys() or kwargs['force'] != True:
+            warning = "LU-decomposition is not to be used on sparse matrices.\nImplementing was only necessary for dense matrices.\n\nRuntime of this function is very slow due to an inefficient algorithm. O(n^3)\n\nTo silence this warning this warning use: `LU_decomp(force=True)`"
+            raise DeprecationWarning(warning)
         if not self.quadratic:
             raise AssertionError('LU decomposition is not possible for non-quadratic matrices.')
         import copy
