@@ -405,12 +405,12 @@ class linsys(object):
         return 'matrix: \n{}\ntarget vector: \n{}'.format(self.matrix, self.target_vector)
     
     def LU_solve(self):
-    '''
-    Author: Henrik Spielvogel
-
-    Solving a dense linear system using LU-Decomposition without pivoting
-
-    '''
+        '''
+        Author: Henrik Spielvogel
+    
+        Solving a dense linear system using LU-Decomposition without pivoting
+        '''
+    
         if self.shape[0] != self.shape[1]:
             raise AssertionError('LU decomposition is not possible for non-quadratic matrices.')  
         
