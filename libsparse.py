@@ -6,7 +6,7 @@ This library implements sparse matrices.
 `import libsparse as sp`
 
 
-Sparse matricies are matricies which have relativley few non-zero entries.
+Sparse matrices are matrices which have relatively few non-zero entries.
 
 Therefore it is inefficient to store them as a complete array object.
 
@@ -179,7 +179,7 @@ class sparse(object):
         > self.CSR :  dict containing the CSR object
         '''
         csr = {'AVAL': [], 'JCOL': [], 'IROW': [0]}
-        for j, col in enumerate(array):
+        for _, col in enumerate(array):
             for i, el in enumerate(col):
                 if el != 0:
                     csr['AVAL'].append(el)
@@ -256,9 +256,6 @@ class sparse(object):
         '''
         evals = scipy.sparse.linalg.eigs(self.toarray())
         return np.alltrue(evals[0] > 0)
-    
-
-        
 
     def _choose_scheme(self, array: np.ndarray):
         # "_method" means python won't import this method with wildcard import "from lib import * "
@@ -278,10 +275,9 @@ class sparse(object):
             # self.CSR = self.construct_CSR(array)
             self.CSR = self.construct_CSR_fast(array)
         else:
-            raise ValueError('Sparisty should be in half-open interval [0,1), but is {:.3f}'.format(self.sparsity))
+            raise ValueError('Sparsity should be in half-open interval [0,1), but is {:.3f}'.format(self.sparsity))
 
         pass
-
 
     def vdot(self, vec: np.ndarray):
         '''
@@ -362,7 +358,7 @@ class sparse(object):
         '''
         Author: Simon Glennemeier-Marke
         '''
-        data=self.toarray()
+        data = self.toarray()
         fig = plt.figure()
         ax = fig.add_subplot(111)
         cax = ax.matshow(data, interpolation='nearest')
@@ -382,6 +378,11 @@ def random_banded(size, num_diags):
     return scipy.sparse.eye(size)+(mat+np.transpose(mat))/2
 
 
+class dense(np.ndarray):
+    def __init__(self):
+        super().__init__()
+
+
 class linsys(object):
     '''
     Author: Henrik Spielvogel
@@ -389,38 +390,40 @@ class linsys(object):
     Arguments:
     ----------
     > `A` : Sparse array
-    > `b` : 1D-list or np.ndarray 
+    > `b` : 1D-list or np.ndarray
     '''
 
-    def __init__(self, A: sparse,b,x):
-        A:sparse
+    def __init__(self, A: sparse, b, x):
+        A: sparse
         self.A = A
         self.b = b
         self.x = x
-    
+
     def funktion(self):
         mat = self.A
         return mat.sparsity
+
 
 if __name__ == "__main__":
     rng: np.random.Generator  # hint for IntelliSense
     N = 10
     # a = sparse(np.eye(N))
     a = sparse(random_banded(N, 2))
+    a.LU_decomp()
     # a = sparse(scipy.sparse.rand(50, 50, 0.1).toarray())
     # a = sparse([[1,2,0,0,0],[0,3,3,0,0],[0,0,69,-1,0],[0,0,0,0,1],[0,0,0,0,88]])
     # print(a.check_posdef())
     # a.show()
-    print(a)
-    a=linsys(a,[],[])
-    print(a.funktion())
+    # print(a)
+    # a = linsys(a, [], [])
+    # print(a.funktion())
     pass
 
 
-''' 
+'''
 TODO Tasks:
   > LU-Decomp for dense
   > CG-Method for dense and sparse
-  > Gaussian elimination 
+  > Gaussian elimination
 
 '''
