@@ -404,6 +404,45 @@ class linsys(object):
     def __repr__(self):        
         return 'matrix: \n{}\ntarget vector: \n{}'.format(self.matrix, self.target_vector)
     
+    def LU_solve(self):
+    '''
+    Author: Henrik Spielvogel
+
+    Solving a dense linear system using LU-Decomposition without pivoting
+
+    '''
+        if self.shape[0] != self.shape[1]:
+            raise AssertionError('LU decomposition is not possible for non-quadratic matrices.')  
+        
+        mat = self.matrix 
+        vec = self.target_vector         
+        L = np.eye(self.N)
+        U = np.zeros(self.shape)
+        y = np.zeros_like(vec)
+        sol = y
+        
+        # LU-Decomposition
+        for i in range(self.N):
+            for k in range(i, self.N):
+                val = 0
+                for j in range(i):
+                    val += L[i][j] * U[j][k]              
+                U[i][k] = mat[i][k] - val
+            for k in range(i, self.N):
+                val = 0
+                for j in range(i):
+                    val += L[k][j] * U[j][i]
+                L[k][i] = (mat[k][i] - val)/U[i][i]
+        
+        # forward substitution
+        for i in range(self.N):
+            y[i] = (vec[i] - y.dot(L[i]))/L[i][i]
+        # back substitution
+        for i in range(self.N, 0, -1):
+            sol[i-1] = (y[i-1] - U[i-1, i:].dot(sol[i:])) / U[i-1, i-1]
+        
+        return sol    
+    
     
     def solve(self, sparse = False, method = 'scipy'):  
         mat = self.matrix 
@@ -416,33 +455,8 @@ class linsys(object):
             if method == 'scipy':
                 sol = scipy.linalg.solve(mat, vec)
             elif method == 'LU':  
-                if self.shape[0] != self.shape[1]:
-                    raise AssertionError('LU decomposition is not possible for non-quadratic matrices.')  
-                L = np.eye(self.N)
-                U = np.zeros(self.shape)
-                y = np.zeros_like(vec)
-                sol = y
+                sol = self.LU_solve()
                 
-                # LU-Decomposition
-                for i in range(self.N):
-                    for k in range(i, self.N):
-                        val = 0
-                        for j in range(i):
-                            val += L[i][j] * U[j][k]              
-                        U[i][k] = mat[i][k] - val
-                    for k in range(i, self.N):
-                        val = 0
-                        for j in range(i):
-                            val += L[k][j] * U[j][i]
-                        L[k][i] = (mat[k][i] - val)/U[i][i]
-                
-                # forward substitution
-                for i in range(self.N):
-                    y[i] = (vec[i] - y.dot(L[i]))/L[i][i]
-                # back substitution
-                for i in range(self.N, 0, -1):
-                    sol[i-1] = (y[i-1] - U[i-1, i:].dot(sol[i:])) / U[i-1, i-1]
-                        
         return sol
         
 
