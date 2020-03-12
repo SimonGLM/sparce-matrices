@@ -378,21 +378,6 @@ def random_banded(size, num_diags):
                              range((-num_diags+1)//2, (num_diags+1)//2), shape=(size, size)).toarray()
     return scipy.sparse.eye(size)+(mat+np.transpose(mat))/2
 
-    
-def ufsub(L,b):
-    """ Unit row oriented forward substitution """
-    for i in range(L.shape[0]): 
-        for j in range(i):
-            b[i] -= L[i,j]*b[j]
-    return b
-
-def bsub(U,y):
-    """ Row oriented backward substitution """
-    for i in range(U.shape[0]-1,-1,-1): 
-        for j in range(i+1, U.shape[1]):
-            y[i] -= U[i,j]*y[j]
-        y[i] = y[i]/U[i,i]
-    return y
 
 class linsys(object):
     '''
@@ -419,10 +404,6 @@ class linsys(object):
     def __repr__(self):        
         return 'matrix: \n{}\ntarget vector: \n{}'.format(self.matrix, self.target_vector)
     
-
-    
-    
-    
     
     def solve(self, sparse = False, method = 'scipy'):  
         mat = self.matrix 
@@ -434,7 +415,9 @@ class linsys(object):
         else:          
             if method == 'scipy':
                 sol = scipy.linalg.solve(mat, vec)
-            elif method == 'LU':    
+            elif method == 'LU':  
+                if self.shape[0] != self.shape[1]:
+                    raise AssertionError('LU decomposition is not possible for non-quadratic matrices.')  
                 L = np.eye(self.N)
                 U = np.zeros(self.shape)
                 y = np.zeros_like(vec)
@@ -474,14 +457,13 @@ if __name__ == "__main__":
               [ 0,  1,  0,  1,  0], 
               [-1, -1, -3, -1,  0],
               [ 0,  1, -1,  2,  0], 
-              [ 0,  1, -1,  1, -1]], dtype=np.float_)
-    
-    vec = np.array([-1, -2, 5, -2, -2], dtype=np.float_)
+              [ 0,  1, -1,  1, -1]], dtype=np.float_)  
+    vec1 = np.array([-1, -2, 5, -2, -2], dtype=np.float_)
 
     mat2 = random_banded(N, 100)
     vec2 = np.random.rand(N)
     
-    sys = linsys(mat2,vec2)
+    sys = linsys(mat2, vec2)
     sol= sys.solve(method = 'LU')
     sol1 = sys.solve(method = 'scipy')
     print(sol)
@@ -493,7 +475,6 @@ if __name__ == "__main__":
 
 ''' 
 TODO Tasks:
-  > LU-Decomp for dense
   > CG-Method for dense and sparse
   > Gaussian elimination 
 
