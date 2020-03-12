@@ -378,6 +378,23 @@ def random_banded(size, num_diags):
     return scipy.sparse.eye(size)+(mat+np.transpose(mat))/2
 
 
+def ufsub(L, b):
+    """ Unit row oriented forward substitution """
+    for i in range(L.shape[0]):
+        for j in range(i):
+            b[i] -= L[i, j]*b[j]
+    return b
+
+
+def bsub(U, y):
+    """ Row oriented backward substitution """
+    for i in range(U.shape[0]-1, -1, -1):
+        for j in range(i+1, U.shape[1]):
+            y[i] -= U[i, j]*y[j]
+        y[i] = y[i]/U[i, i]
+    return y
+
+
 class dense(np.ndarray):
     def __init__(self):
         super().__init__()
@@ -387,36 +404,88 @@ class linsys(object):
     '''
     Author: Henrik Spielvogel
 
+    A linear system of the form Ax=b
+    ================================
+
+    This object creates linear systems of equations of the form Ax=b.
+    It implements different methods for solving these systems considering the sparsity of the given matrix A.
+
     Arguments:
     ----------
-    > `A` : Sparse array
+    > `A` : np.ndarray
     > `b` : 1D-list or np.ndarray
     '''
 
-    def __init__(self, A: sparse, b, x):
-        A: sparse
-        self.A = A
-        self.b = b
-        self.x = x
+    def __init__(self, A, b):
+        self.matrix = A if (type(A) == np.ndarray) else np.array(A)
+        self.target_vector = b if (type(b) == np.ndarray) else np.array(b)
+        self.shape = A.shape
+        self.N = A.shape[0]
 
-    def funktion(self):
-        mat = self.A
-        return mat.sparsity
+    def __repr__(self):
+        return 'matrix: \n{}\ntarget vector: \n{}'.format(self.matrix, self.target_vector)
+
+    def solve(self, sparse=False, method='scipy'):
+        mat = self.matrix
+        vec = self.target_vector
+
+        if sparse:
+            # needs routine for solving sparse systems
+            pass
+        else:
+            if method == 'scipy':
+                sol = scipy.linalg.solve(mat, vec)
+            elif method == 'LU':
+                L = np.eye(self.N)
+                U = np.zeros(self.shape)
+                y = np.zeros_like(vec)
+                sol = y
+
+                # LU-Decomposition
+                for i in range(self.N):
+                    for k in range(i, self.N):
+                        val = 0
+                        for j in range(i):
+                            val += L[i][j] * U[j][k]
+                        U[i][k] = mat[i][k] - val
+                    for k in range(i, self.N):
+                        val = 0
+                        for j in range(i):
+                            val += L[k][j] * U[j][i]
+                        L[k][i] = (mat[k][i] - val)/U[i][i]
+
+                # forward substitution
+                for i in range(self.N):
+                    y[i] = (vec[i] - y.dot(L[i]))/L[i][i]
+                # back substitution
+                for i in range(self.N, 0, -1):
+                    sol[i-1] = (y[i-1] - U[i-1, i:].dot(sol[i:])) / U[i-1, i-1]
+
+        return sol
 
 
 if __name__ == "__main__":
     rng: np.random.Generator  # hint for IntelliSense
-    N = 10
-    # a = sparse(np.eye(N))
-    a = sparse(random_banded(N, 2))
-    a.LU_decomp()
-    # a = sparse(scipy.sparse.rand(50, 50, 0.1).toarray())
-    # a = sparse([[1,2,0,0,0],[0,3,3,0,0],[0,0,69,-1,0],[0,0,0,0,1],[0,0,0,0,88]])
-    # print(a.check_posdef())
-    # a.show()
-    # print(a)
-    # a = linsys(a, [], [])
-    # print(a.funktion())
+    N = 100
+
+    mat1 = A = np.array([[-3,  1, -1,  0, -1],
+                         [0,  1,  0,  1,  0],
+                         [-1, -1, -3, -1,  0],
+                         [0,  1, -1,  2,  0],
+                         [0,  1, -1,  1, -1]], dtype=np.float_)
+
+    vec = np.array([-1, -2, 5, -2, -2], dtype=np.float_)
+
+    mat2 = random_banded(N, 100)
+    vec2 = np.random.rand(N)
+
+    sys = linsys(mat2, vec2)
+    sol = sys.solve(method='LU')
+    sol1 = sys.solve(method='scipy')
+    print(sol)
+    print(sol1)
+    print(np.allclose(sol, sol1))
+
     pass
 
 
