@@ -414,6 +414,10 @@ class linsys(object):
         Author: Henrik Spielvogel
     
         Solving a dense linear system using LU-Decomposition without pivoting
+        
+        Returns:
+        --------
+        > `sol`: np.ndarray solution vector x of the linear system Ax=b
         '''
     
         if self.shape[0] != self.shape[1]:
@@ -448,6 +452,42 @@ class linsys(object):
         
         return sol    
     
+    def cg_solve(self, TOL = 1e-8):
+        '''
+        Author: Henrik Spielvogel
+    
+        Solving a dense linear system using the conjugate-gradient-method
+        
+        Returns:
+        --------
+        > `sol`: np.ndarray solution vector x of the linear system Ax=b
+        '''
+        n = self.N
+        mat = self.matrix
+        vec = self.target_vector
+
+        x = np.ones(n)
+        r = mat.dot(x) - vec
+        p = -r
+        r_norm = r.dot(r)
+        
+        for i in range(2*n):
+            z = mat.dot(p)
+            alpha = r_norm / p.dot(z)
+            x += alpha * p
+            r += alpha * z
+            r_norm_next = r.dot(r)
+            beta = r_norm_next / r_norm
+            r_norm = r_norm_next
+            
+            if r_norm_next < TOL:
+                print('CG-Method converged after {} iterations.'.format(i))
+                break
+            p = beta * p - r
+
+        sol = x
+        
+        return sol
     
     def solve(self, sparse = False, method = 'scipy'):  
         mat = self.matrix 
@@ -461,6 +501,10 @@ class linsys(object):
                 sol = scipy.linalg.solve(mat, vec)
             elif method == 'LU':  
                 sol = self.LU_solve()
+            elif method =='CG':
+                sol = self.cg_solve()
+            else:
+                raise ValueError('Method {} ist not implemented. Use scipy, LU or CG istead.'.format(method))
                 
         return sol
 
@@ -476,22 +520,37 @@ if __name__ == "__main__":
               [ 0,  1, -1,  1, -1]], dtype=np.float_)  
     vec1 = np.array([-1, -2, 5, -2, -2], dtype=np.float_)
 
-    mat2 = random_banded(N, 100)
+    mat2 = random_banded(N, N//10)
     vec2 = np.random.rand(N)
     
+    from timeit import default_timer as timer
     sys = linsys(mat2, vec2)
-    sol= sys.solve(method = 'LU')
-    sol1 = sys.solve(method = 'scipy')
-    print(sol)
-    print(sol1)
-    print(np.allclose(sol, sol1))
+    
+    start1 = timer()
+    sol1= sys.solve(method = 'scipy')
+    t1 = timer()-start1
+    
+    start2 = timer()
+    sol2 = sys.solve(method = 'LU')
+    t2 = timer() - start2
+    
+    start3 = timer()
+    sol3 = sys.solve(method = 'CG')
+    t3 = timer() - start3
+    
+    print('Scipy took {:1.5f} seconds'.format(t1))
+    print('LU-Decomp took {:1.5f} seconds'.format(t2))
+    print('Conjugate-Gradient-Method took {:1.5f} seconds'.format(t3))
+    
+    print('scipy == LU: {}'.format(np.allclose(sol1, sol2)))
+    print('scipy == CG: {}'.format(np.allclose(sol1, sol3, atol = 1e-4)))
 
     pass
 
 
 '''
 TODO Tasks:
-  > CG-Method for dense and sparse
+  > CG-Method for sparse
   > Gaussian elimination
 
 '''
