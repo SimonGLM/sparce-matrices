@@ -82,7 +82,6 @@ class sparse(object):
             return self.dot(other)
 
     def __getitem__(self, key):
-        # FIXME gotta be fasta!
         '''
         Author: Simon Glennemeier-Marke
 
@@ -106,10 +105,6 @@ class sparse(object):
             raise IndexError('Index out of range.')
         i, j = key
         if i != None and j != None:
-            if i == 0 or j == 0:
-                raise IndexError('Indices count from 1.')
-            i -= 1
-            j -= 1
             slice_ = slice(self.CSR['IROW'][i], self.CSR['IROW'][i+1])
             if j in self.CSR['JCOL'][slice_]:
                 j_index = self.CSR['IROW'][i]+self.CSR['JCOL'][slice_].index(j)
@@ -118,13 +113,12 @@ class sparse(object):
                 return 0
         if i != None and j == None:
             # Retrun row at `i`
-            return [self[i, k] for k in range(1, self.shape[1]+1)]
+            return [self[i, k] for k in range(self.shape[1])]
         if i == None and j != None:
             # Return col at `JCOL`
-            return [self[k, j] for k in range(1, self.shape[0]+1)]
+            return [self[k, j] for k in range(self.shape[0])]
 
     def __setitem__(self, key, value):
-        #  FIXME gotta be fasta!
         '''
         Author: Simon Glennemeier-Marke
 
@@ -151,10 +145,6 @@ class sparse(object):
         if len(key) != 2:
             raise IndexError('Index has to be tuple.')
         i, j = key
-        if i == 0 or j == 0:
-            raise IndexError('Indices count from 1.')
-        i -= 1
-        j -= 1
         slice_ = slice(self.CSR['IROW'][i], self.CSR['IROW'][i+1])
         if j in self.CSR['JCOL'][slice_]:  # Value exists, just needs to be overwritten
             index = self.CSR['IROW'][i]+self.CSR['JCOL'][slice_].index(j)
@@ -207,15 +197,15 @@ class sparse(object):
         > self.CSR :  dict containing the CSR object
         '''
         array: np.ndarray
-        jcol = np.array([])
-        aval = np.array([])
-        irow = np.array([0])
+        jcol = np.array([], dtype=np.int32)
+        aval = np.array([], dtype=np.float)
+        irow = np.array([], dtype=np.int32)
         for row in array:
             row: np.ndarray
             indices = np.nonzero(row)[0]
             jcol = np.append(jcol, indices)
             aval = np.append(aval, np.take(row, indices))
-            irow = np.append(irow, len(aval))
+            irow = np.append(irow, len(aval)-1)
         csr = {'AVAL': list(aval), 'JCOL': list(jcol), 'IROW': list(irow)}
         return csr
 
@@ -330,11 +320,11 @@ class sparse(object):
             raise AttributeError(
                 'Shapes do not match {}, {}'.format(self.shape, other.shape))
         result = np.zeros((self.shape[0], other.shape[1]))
-        for i in range(1, self.shape[0]+1):
-            for j in range(1, other.shape[1]+1):
+        for i in range(self.shape[0]):
+            for j in range(other.shape[1]):
                 row = self[i, None]
                 col = other[None, j]
-                result[i-1, j-1] = sum([r*c for r, c in zip(row, col)])
+                result[i, j] = sum([r*c for r, c in zip(row, col)])
         return sparse(result)
 
     def LU_decomp(self, **kwargs):
