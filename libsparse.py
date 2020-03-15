@@ -64,11 +64,10 @@ class sparse(object):
         temp = array if (type(array) == np.ndarray) else np.array(array)
         self.sparsity = 1 - np.count_nonzero(temp)/temp.size
         self.shape = temp.shape
-        self.quadratic = bool(self.shape[0] == self.shape[1])
         self.T = self.transpose
         self._choose_scheme(temp)
         del temp
-        self.N = self.shape[0] if self.quadratic else None
+        self.N = self.shape[0] if quadratic(self) else None
 
     def __repr__(self):
         return '<sparse matrix of shape {} and sparsity {:.2f}>'.format(self.shape, self.sparsity)
@@ -199,7 +198,7 @@ class sparse(object):
         array: np.ndarray
         jcol = np.array([], dtype=np.int32)
         aval = np.array([], dtype=np.float)
-        irow = np.array([], dtype=np.int32)
+        irow = np.array([0], dtype=np.int32)
         for row in array:
             row: np.ndarray
             indices = np.nonzero(row)[0]
@@ -247,8 +246,7 @@ class sparse(object):
         evals = scipy.sparse.linalg.eigs(self.toarray())
         return np.alltrue(evals[0] > 0)
 
-    def _choose_scheme(self, array: np.ndarray):
-        # "_method" means python won't import this method with wildcard import "from lib import * "
+    def _choose_scheme(self, array):
         '''
         Author: Simon Glennemeier-Marke
 
@@ -283,8 +281,8 @@ class sparse(object):
 
         '''
 
-        n = self.shape[0]
         vec = vec if type(vec) == np.ndarray else np.array(vec)
+        n = len(vec)
         outvec = []
 
         if vec.shape[0] == n:
@@ -327,23 +325,6 @@ class sparse(object):
                 result[i, j] = sum([r*c for r, c in zip(row, col)])
         return sparse(result)
 
-    def LU_decomp(self, **kwargs):
-        if 'force' not in kwargs.keys() or kwargs['force'] != True:
-            warning = "LU-decomposition is not to be used on sparse matrices.\nImplementing was only necessary for dense matrices.\n\nRuntime of this function is very slow due to an inefficient algorithm. O(n^3)\n\nTo silence this warning this warning use: `LU_decomp(force=True)`"
-            raise DeprecationWarning(warning)
-        if not self.quadratic:
-            raise AssertionError('LU decomposition is not possible for non-quadratic matrices.')
-        import copy
-        L = sparse(np.eye(self.N))
-        U = np.zeros(self.shape)
-        # U = copy.deepcopy(self)
-        for i in range(1, self.N):
-            for k in range(i+1, self.N):
-                L[k, i] = float(self[k, i] / self[i, i])
-                for j in range(i, self.N+1):
-                    U[k-1, j-1] = float(self[k, j] - L[k, i] * self[i, j])
-        return L, sparse(U)
-
     def show(self):
         '''
         Author: Simon Glennemeier-Marke
@@ -356,6 +337,37 @@ class sparse(object):
         plt.show()
 
 
+def lu_factor(array):
+    '''
+    Author: Simon Glennemeier-Marke
+
+    Arguments:
+    ----------
+    > `array` : Input array to be LU factorized
+    '''
+    # if 'force' not in kwargs.keys() or kwargs['force'] != True:
+    #     warning = "LU-decomposition is not to be used on sparse matrices.\nImplementing was only necessary for dense matrices.\n\nRuntime of this function is very slow due to an inefficient algorithm. O(n^3)\n\nTo silence this warning this warning use: `lu_factor(force=True)`"
+    #     raise DeprecationWarning(warning)
+    if not quadratic(array):
+        raise AssertionError('LU decomposition is not possible for non-quadratic matrices.')
+    N = array.shape[0]
+    P = np.eye(N)
+    L = np.eye(N)
+    U = np.zeros(array.shape)
+    for i in range(N-1):
+        for k in range(i, N):
+            L[k, i] = float(U[k, i] / U[i, i])
+            for j in range(i, N):
+                U[k, j] = float(U[k, j] - L[k, i] * U[i, j])
+    # FIXME
+    return L, U, P
+
+
+def quadratic(array):
+    '''Author: Simon Glennemeier-Marke'''
+    return bool(array.shape[0] == array.shape[1])
+
+
 def random_banded(size, num_diags):
     '''
     Author: Simon Glennemeier-Marke
@@ -365,13 +377,7 @@ def random_banded(size, num_diags):
     '''
     mat = scipy.sparse.diags([rng.uniform(0, 1, size=size) for i in range(num_diags)],
                              range((-num_diags+1)//2, (num_diags+1)//2), shape=(size, size)).toarray()
-    return scipy.sparse.eye(size)+(mat+np.transpose(mat))/2
-
-
-
-class dense(np.ndarray):
-    def __init__(self):
-        super().__init__()
+    return np.array(scipy.sparse.eye(size)+(mat+np.transpose(mat))/2)
 
 
 class linsys(object):
@@ -386,92 +392,85 @@ class linsys(object):
 
     Arguments:
     ----------
-    > `A` : np.ndarray
+    > `A` : sp.sparse or np.ndarray
     > `b` : 1D-list or np.ndarray
     '''
 
     def __init__(self, A, b):
-        self.matrix = A if (type(A) == np.ndarray) else np.array(A)
+        if type(A) not in [sparse, np.ndarray]:
+            raise TypeError('Matrix A has to be of type sp.sparse or np.ndarray')
+        self.matrix = A
         self.target_vector = b if (type(b) == np.ndarray) else np.array(b)
         self.shape = A.shape
         self.N = A.shape[0]
 
     def __repr__(self):
-        return 'matrix: \n{}\ntarget vector: \n{}'.format(self.matrix, self.target_vector)
-    
-    def LU_solve(self):
+        return '<linsys of dim: {} >'.format(self.N)
+
+    def lu_solve(self):
         '''
         Author: Henrik Spielvogel
-    
+
         Solving a dense linear system using LU-Decomposition without pivoting
         '''
-    
-        if self.shape[0] != self.shape[1]:
-            raise AssertionError('LU decomposition is not possible for non-quadratic matrices.')  
-        
-        mat = self.matrix 
-        vec = self.target_vector         
-        L = np.eye(self.N)
-        U = np.zeros(self.shape)
+
+        mat = self.matrix
+        vec = self.target_vector
         y = np.zeros_like(vec)
         sol = y
-        
+
         # LU-Decomposition
-        for i in range(self.N):
-            for k in range(i, self.N):
-                val = 0
-                for j in range(i):
-                    val += L[i][j] * U[j][k]              
-                U[i][k] = mat[i][k] - val
-            for k in range(i, self.N):
-                val = 0
-                for j in range(i):
-                    val += L[k][j] * U[j][i]
-                L[k][i] = (mat[k][i] - val)/U[i][i]
-        
+        L, U, P = lu_factor(mat)
+
         # forward substitution
         for i in range(self.N):
-            y[i] = (vec[i] - y.dot(L[i]))/L[i][i]
+            y[i] = (vec[i] - y.dot(L[i]))/L[i, i]
         # back substitution
         for i in range(self.N, 0, -1):
-            sol[i-1] = (y[i-1] - U[i-1, i:].dot(sol[i:])) / U[i-1, i-1]
-        
-        return sol    
-    
-    
-    def solve(self, sparse = False, method = 'scipy'):  
-        mat = self.matrix 
-        vec = self.target_vector   
-        
-        if sparse:
+            sol[i - 1] = (y[i - 1] - U[i - 1, i:].dot(sol[i:])) / U[i - 1, i - 1]
+
+        return sol
+
+    def solve(self, method='scipy'):
+        mat = self.matrix
+        vec = self.target_vector
+
+        implemented = ['scipy', 'gauss']
+        if method not in implemented:
+            raise KeyError('Method `{}` unknown. Possible methods are {}'.format(method, implemented))
+
+        if False:  # type(self.matrix) != sparse:
             # needs routine for solving sparse systems
-            pass
+            raise NotImplementedError
         else:
             if method == 'scipy':
                 sol = scipy.linalg.solve(mat, vec)
-            elif method == 'LU':  
-                sol = self.LU_solve()
-                
+            elif method == 'gauss':
+                sol = self.lu_solve()
+
         return sol
 
 
 if __name__ == "__main__":
     rng: np.random.Generator  # hint for IntelliSense
-    N = 100
+    N = 10
+    a = np.random.randint(-3, 3, (N, N))
+    a = np.eye(N)+((a+np.transpose(a))/2)
+    P, L, _ = lu_factor(a)
 
     mat1 = A = np.array([[-3,  1, -1,  0, -1],
-              [ 0,  1,  0,  1,  0], 
-              [-1, -1, -3, -1,  0],
-              [ 0,  1, -1,  2,  0], 
-              [ 0,  1, -1,  1, -1]], dtype=np.float_)  
+                         [0,  1,  0,  1,  0],
+                         [-1, -1, -3, -1,  0],
+                         [0,  1, -1,  2,  0],
+                         [0,  1, -1,  1, -1]], dtype=np.float_)
     vec1 = np.array([-1, -2, 5, -2, -2], dtype=np.float_)
 
-    mat2 = random_banded(N, 100)
+    mat2 = random_banded(N, N//4)
     vec2 = np.random.rand(N)
-    
+
     sys = linsys(mat2, vec2)
-    sol= sys.solve(method = 'LU')
-    sol1 = sys.solve(method = 'scipy')
+    sol = sys.solve(method='gauss')
+    sol1 = sys.solve(method='scipy')
     print(sol)
     print(sol1)
     print(np.allclose(sol, sol1))
