@@ -452,7 +452,7 @@ class linsys(object):
         
         return sol    
     
-    def cg_solve(self, TOL = 1e-8):
+    def cg_solve(self, init_guess = None, TOL = 1e-8):
         '''
         Author: Henrik Spielvogel
     
@@ -466,7 +466,15 @@ class linsys(object):
         mat = self.matrix
         vec = self.target_vector
 
-        x = np.ones(n)
+        if init_guess is None:
+            x = np.ones(n)
+        elif type(init_guess) == list and len(init_guess) == n:
+            x = np.array(init_guess)
+        elif type(init_guess) == np.ndarray and init_guess.shape[0] == n:
+            x = init_guess
+        else:
+            raise ValueError('init_guess must be list or np.ndarray of length {}.'.format(n))
+
         r = mat.dot(x) - vec
         p = -r
         r_norm = r.dot(r)
@@ -535,7 +543,7 @@ if __name__ == "__main__":
     t2 = timer() - start2
     
     start3 = timer()
-    sol3 = sys.solve(method = 'CG')
+    sol3 = sys.cg_solve(init_guess = np.random.rand(sys.N-1))
     t3 = timer() - start3
     
     print('Scipy took {:1.5f} seconds'.format(t1))
