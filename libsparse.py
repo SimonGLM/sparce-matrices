@@ -25,6 +25,7 @@ This library is part of a project done as an end-term assignment in the 'Scienti
 '''
 
 import matplotlib.pyplot as plt
+import scipy.linalg
 import scipy.sparse.linalg
 import scipy.sparse
 import scipy
@@ -354,13 +355,20 @@ def lu_factor(array):
     P = np.eye(N)
     L = np.eye(N)
     U = np.zeros(array.shape)
-    for i in range(N-1):
+    for i in range(N):
         for k in range(i, N):
-            L[k, i] = float(U[k, i] / U[i, i])
-            for j in range(i, N):
-                U[k, j] = float(U[k, j] - L[k, i] * U[i, j])
-    # FIXME
-    return L, U, P
+            val = 0
+            for j in range(i):
+                val += L[i, j] * U[j, k]
+            U[i, k] = array[i, k] - val
+        for k in range(i, N):
+            val = 0
+            for j in range(i):
+                val += L[k, j] * U[j, i]
+            if U[i, i] == 0:
+                raise ZeroDivisionError
+            L[k, i] = (array[k, i] - val)/U[i, i]
+    return P, L, U
 
 
 def quadratic(array):
@@ -420,7 +428,7 @@ class linsys(object):
         sol = y
 
         # LU-Decomposition
-        L, U, P = lu_factor(mat)
+        P, L, U = lu_factor(mat)
 
         # forward substitution
         for i in range(self.N):
@@ -456,7 +464,6 @@ if __name__ == "__main__":
     N = 10
     a = np.random.randint(-3, 3, (N, N))
     a = np.eye(N)+((a+np.transpose(a))/2)
-    P, L, _ = lu_factor(a)
 
     mat1 = A = np.array([[-3,  1, -1,  0, -1],
                          [0,  1,  0,  1,  0],
