@@ -74,12 +74,7 @@ class sparse(object):
         return '<sparse matrix of shape {} and sparsity {:.2f}>'.format(self.shape, self.sparsity)
 
     def __mul__(self, other):
-        if type(other) != sparse:
-            # Matrix-Vector product
-            return self.vdot(other)
-        else:
-            # Matrix-Matrix product
-            return self.dot(other)
+        return self.dot(other)
 
     def __getitem__(self, key):
         '''
@@ -268,7 +263,7 @@ class sparse(object):
 
         pass
 
-    def vdot(self, vec: np.ndarray):
+    def _vdot(self, vec: np.ndarray):
         '''
         Author: Henrik Spielvogel
 
@@ -313,6 +308,8 @@ class sparse(object):
         --------
         > <class sparse> of multiplied matrices
         '''
+        if len(other.shape) == 1:
+            return self._vdot(other)
         if type(other) != sparse:
             raise TypeError("Argument has to be {}, not {}".format(type(self), type(other)))
         if self.shape[1] != other.shape[0]:
