@@ -296,25 +296,30 @@ class sparse(object):
         '''
         Author: Simon Glennemeier-Marke
 
-        To avoid confusion about commutativity,
-        use:
+        Compute the dot product of a matrix and either another matrix or a vector
 
+        If other is a vector we call `self._vdot(other)`.
+        This is to enhance comability with numpy methods of matrix multiplication.
+
+        Operator overloading:
+        ---------------------
         >>> A * B
-
-        `dot` computes the right sided dot product
-        > `A.dot(B)` = " `A` * `B` "
 
         Returns:
         --------
-        > <class sparse> of multiplied matrices
+        > <class 'sparse'> of multiplied matrices
+        > or
+        > <class 'numpy.ndarray'> in case of a multiplication with a vector
         '''
-        if len(other.shape) == 1:
+        if type(other) != sparse and len(other.shape) == 1:  # check for vector
             return self._vdot(other)
-        if type(other) != sparse:
-            raise TypeError("Argument has to be {}, not {}".format(type(self), type(other)))
+        if type(other) == np.ndarray:  # check for ndarray
+            return self.toarray()@other
+
         if self.shape[1] != other.shape[0]:
             raise AttributeError(
                 'Shapes do not match {}, {}'.format(self.shape, other.shape))
+
         result = np.zeros((self.shape[0], other.shape[1]))
         for i in range(self.shape[0]):
             for j in range(other.shape[1]):
@@ -342,10 +347,13 @@ def lu_factor(array):
     Arguments:
     ----------
     > `array` : Input array to be LU factorized
+
+    Returns:
+    --------
+    > `P` : Permutation matrix
+    > `L` : Lower triangular
+    > `U` : Upper triangular
     '''
-    # if 'force' not in kwargs.keys() or kwargs['force'] != True:
-    #     warning = "LU-decomposition is not to be used on sparse matrices.\nImplementing was only necessary for dense matrices.\n\nRuntime of this function is very slow due to an inefficient algorithm. O(n^3)\n\nTo silence this warning this warning use: `lu_factor(force=True)`"
-    #     raise DeprecationWarning(warning)
     if not quadratic(array):
         raise AssertionError('LU decomposition is not possible for non-quadratic matrices.')
     N = array.shape[0]
@@ -379,6 +387,9 @@ def random_banded(size, num_diags):
 
     Create symmetric banded matrix of dimension `size` with `num_diags` diagonals.
 
+    Returns:
+    --------
+    > np.ndarray
     '''
     mat = scipy.sparse.diags([rng.uniform(0, 1, size=size) for i in range(num_diags)],
                              range((-num_diags+1)//2, (num_diags+1)//2), shape=(size, size)).toarray()
@@ -530,7 +541,7 @@ if __name__ == "__main__":
     t1 = timer()-start1
 
     start2 = timer()
-    sol2 = sys.solve(method='LU')
+    sol2 = sys.solve(method='lu')
     t2 = timer() - start2
 
     start3 = timer()
