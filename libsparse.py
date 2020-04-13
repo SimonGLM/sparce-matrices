@@ -66,15 +66,123 @@ class sparse(object):
         self.sparsity = 1 - np.count_nonzero(temp)/temp.size
         self.shape = temp.shape
         self.T = self.transpose
-        self._choose_scheme(temp)
+        # self._choose_scheme(temp)
         del temp
         self.N = self.shape[0] if quadratic(self) else None
 
+    def transpose(self):
+        '''
+        Author: Simon Glennemeier-Marke
+
+        Return the transposed version of self.
+
+        Returns:
+        --------
+        > `sp.sparse` : Transposed sparse object of self
+        '''
+        return sparse(np.transpose(self.toarray()))
+
+    def check_posdef(self):
+        '''
+        Author: Henrik Spielvogel
+
+        Checks if matrix is positive definite.
+
+
+        Returns:
+        --------
+        > `bool` : True if self is positive definite
+        '''
+        evals = scipy.sparse.linalg.eigs(self.toarray())
+        return np.alltrue(evals[0] > 0)
+
+    def sparse_vdot(self, vec: np.ndarray):
+        '''
+        Author: Henrik Spielvogel
+
+        Calculates the matrix-vector product of a sparse matrix with `vec`.
+
+        Args:
+        > `vec` :  list or array of same length as matrix
+
+        Returns:
+        > outvec :  np.ndarray
+
+        '''
+
+        vec = vec if type(vec) == np.ndarray else np.array(vec)
+        n = len(vec)
+        outvec = []
+
+        if vec.shape[0] == n:
+            for i in range(n):
+                val = 0
+                for j in np.arange(self.CSR['IROW'][i], self.CSR['IROW'][i+1]):
+                    val += vec[self.CSR['JCOL'][j]] * self.CSR['AVAL'][j]
+                outvec.append(val)
+        else:
+            raise ValueError('Shape of vec must be ({},), but is {}.'.format(n, vec.shape))
+
+        return np.array(outvec)
+
+    def sparse_dot(self, other):
+        '''
+        Author: Simon Glennemeier-Marke
+
+        Compute the dot product of a matrix and either another matrix or a vector
+
+        If other is a vector we call `self._vdot(other)`.
+        This is to enhance comability with numpy methods of matrix multiplication.
+
+        Operator overloading:
+        ---------------------
+        >>> A * B
+
+        Returns:
+        --------
+        > <class 'sparse'> of multiplied matrices
+        > or
+        > <class 'numpy.ndarray'> in case of a multiplication with a vector
+        '''
+        if type(other) != sparse and len(other.shape) == 1:  # check for vector
+            return self.sparse_vdot(other)
+        if type(other) == np.ndarray:  # check for ndarray
+            return self.toarray()@other
+
+        if self.shape[1] != other.shape[0]:
+            raise AttributeError(
+                'Shapes do not match {}, {}'.format(self.shape, other.shape))
+
+        result = np.zeros((self.shape[0], other.shape[1]))
+        for i in range(self.shape[0]):
+            for j in range(other.shape[1]):
+                row = self[i, None]
+                col = other[None, j]
+                result[i, j] = sum([r*c for r, c in zip(row, col)])
+        return result
+
+    def sparse_show(self, data):
+        '''
+        Author: Simon Glennemeier-Marke
+        '''
+        fig = plt.figure()
+        ax = fig.add_subplot(111)
+        cax = ax.matshow(data, interpolation='nearest')
+        fig.colorbar(cax)
+        plt.show()
+
+
+class CSR(sparse):
+    def __init__(self, array, method="fast"):
+        super().__init__(array)
+        self.method = method
+        self.construct(array)
+
     def __repr__(self):
-        return '<sparse matrix of shape {} and sparsity {:.2f}>'.format(self.shape, self.sparsity)
+        return '<CSR matrix of shape {} and sparsity {:.2f}>'.format(self.shape, self.sparsity)
 
     def __mul__(self, other):
-        return self.dot(other)
+        return CSR(self.sparse_dot(other))
 
     def __getitem__(self, key):
         '''
@@ -151,6 +259,9 @@ class sparse(object):
             for k in range(i+1, len(self.CSR['IROW'])):
                 self.CSR['IROW'][k] += 1
 
+    def construct(self, array):
+        self.CSR = self.construct_CSR_fast(array) if self.method == "fast" else self.construct_CSR(array)
+
     def construct_CSR(self, array):
         '''
         Author: Simon Glennemeier-Marke
@@ -216,128 +327,8 @@ class sparse(object):
         '''
         return scipy.sparse.csr_matrix((self.CSR['AVAL'], self.CSR['JCOL'], self.CSR['IROW'])).toarray()
 
-    def transpose(self):
-        '''
-        Author: Simon Glennemeier-Marke
-
-        Return the transposed version of self.
-
-        Returns:
-        --------
-        > `sp.sparse` : Transposed sparse object of self
-        '''
-        return sparse(np.transpose(self.toarray()))
-
-    def check_posdef(self):
-        '''
-        Author: Henrik Spielvogel
-
-        Checks if matrix is positive definite.
-
-
-        Returns:
-        --------
-        > `bool` : True if self is positive definite
-        '''
-        evals = scipy.sparse.linalg.eigs(self.toarray())
-        return np.alltrue(evals[0] > 0)
-
-    def _choose_scheme(self, array):
-        '''
-        Author: Simon Glennemeier-Marke
-
-        Decide which storage scheme to use based on matrix density.
-
-        Args:
-        > `array` : np.ndarray
-        '''
-        if 1 > self.sparsity >= .5:
-            # self.CSR = self.construct_CSR(array)
-            self.CSR = self.construct_CSR_fast(array)
-        elif .5 > self.sparsity >= 0:
-            print('NotImplementedError: falling back to implemented methods')
-            # self.CSR = self.construct_CSR(array)
-            self.CSR = self.construct_CSR_fast(array)
-        else:
-            raise ValueError('Sparsity should be in half-open interval [0,1), but is {:.3f}'.format(self.sparsity))
-
-        pass
-
-    def _vdot(self, vec: np.ndarray):
-        '''
-        Author: Henrik Spielvogel
-
-        Calculates the matrix-vector product of a sparse matrix with `vec`.
-
-        Args:
-        > `vec` :  list or array of same length as matrix
-
-        Returns:
-        > outvec :  np.ndarray
-
-        '''
-
-        vec = vec if type(vec) == np.ndarray else np.array(vec)
-        n = len(vec)
-        outvec = []
-
-        if vec.shape[0] == n:
-            for i in range(n):
-                val = 0
-                for j in np.arange(self.CSR['IROW'][i], self.CSR['IROW'][i+1]):
-                    val += vec[self.CSR['JCOL'][j]] * self.CSR['AVAL'][j]
-                outvec.append(val)
-        else:
-            raise ValueError('Shape of vec must be ({},), but is {}.'.format(n, vec.shape))
-
-        return np.array(outvec)
-
-    def dot(self, other):
-        '''
-        Author: Simon Glennemeier-Marke
-
-        Compute the dot product of a matrix and either another matrix or a vector
-
-        If other is a vector we call `self._vdot(other)`.
-        This is to enhance comability with numpy methods of matrix multiplication.
-
-        Operator overloading:
-        ---------------------
-        >>> A * B
-
-        Returns:
-        --------
-        > <class 'sparse'> of multiplied matrices
-        > or
-        > <class 'numpy.ndarray'> in case of a multiplication with a vector
-        '''
-        if type(other) != sparse and len(other.shape) == 1:  # check for vector
-            return self._vdot(other)
-        if type(other) == np.ndarray:  # check for ndarray
-            return self.toarray()@other
-
-        if self.shape[1] != other.shape[0]:
-            raise AttributeError(
-                'Shapes do not match {}, {}'.format(self.shape, other.shape))
-
-        result = np.zeros((self.shape[0], other.shape[1]))
-        for i in range(self.shape[0]):
-            for j in range(other.shape[1]):
-                row = self[i, None]
-                col = other[None, j]
-                result[i, j] = sum([r*c for r, c in zip(row, col)])
-        return sparse(result)
-
     def show(self):
-        '''
-        Author: Simon Glennemeier-Marke
-        '''
-        data = self.toarray()
-        fig = plt.figure()
-        ax = fig.add_subplot(111)
-        cax = ax.matshow(data, interpolation='nearest')
-        fig.colorbar(cax)
-        plt.show()
+        self.sparse_show(self.toarray())
 
 
 def lu_factor(array):
@@ -518,42 +509,6 @@ class linsys(object):
 
 
 if __name__ == "__main__":
-    rng: np.random.Generator  # hint for IntelliSense
-    N = 10
-    a = np.random.randint(-3, 3, (N, N))
-    a = np.eye(N)+((a+np.transpose(a))/2)
-
-    mat1 = A = np.array([[-3,  1, -1,  0, -1],
-                         [0,  1,  0,  1,  0],
-                         [-1, -1, -3, -1,  0],
-                         [0,  1, -1,  2,  0],
-                         [0,  1, -1,  1, -1]], dtype=np.float_)
-    vec1 = np.array([-1, -2, 5, -2, -2], dtype=np.float_)
-
-    mat2 = random_banded(N, N//10)
-    vec2 = np.random.rand(N)
-
-    from timeit import default_timer as timer
-    sys = linsys(mat2, vec2)
-
-    start1 = timer()
-    sol1 = sys.solve(method='scipy')
-    t1 = timer()-start1
-
-    start2 = timer()
-    sol2 = sys.solve(method='lu')
-    t2 = timer() - start2
-
-    start3 = timer()
-    sol3 = sys.cg_solve(init_guess=np.random.rand(sys.N-1))
-    t3 = timer() - start3
-
-    print('Scipy took {:1.5f} seconds'.format(t1))
-    print('LU-Decomp took {:1.5f} seconds'.format(t2))
-    print('Conjugate-Gradient-Method took {:1.5f} seconds'.format(t3))
-
-    print('scipy == LU: {}'.format(np.allclose(sol1, sol2)))
-    print('scipy == CG: {}'.format(np.allclose(sol1, sol3, atol=1e-4)))
 
     pass
 
