@@ -30,7 +30,7 @@ import scipy.sparse.linalg
 import scipy.sparse
 import scipy
 import numpy as np
-rng = np.random.default_rng()
+
 np.set_printoptions(edgeitems=8, linewidth=180)
 
 
@@ -395,6 +395,7 @@ def random_banded(size, num_diags):
     --------
     > np.ndarray
     '''
+    rng = np.random.default_rng()
     mat = scipy.sparse.diags([rng.uniform(0, 1, size=size) for i in range(num_diags)],
                              range((-num_diags+1)//2, (num_diags+1)//2), shape=(size, size)).toarray()
     return np.array(scipy.sparse.eye(size)+(mat+np.transpose(mat))/2)
@@ -536,8 +537,16 @@ class linsys(object):
 
 
 if __name__ == "__main__":
-    rng: np.random.Generator  # hint for IntelliSense
-    N = 50
+    N = 10
+    a = np.random.randint(-3, 3, (N, N))
+    a = np.eye(N)+((a+np.transpose(a))/2)
+
+    mat1 = A = np.array([[-3,  1, -1,  0, -1],
+                         [0,  1,  0,  1,  0],
+                         [-1, -1, -3, -1,  0],
+                         [0,  1, -1,  2,  0],
+                         [0,  1, -1,  1, -1]], dtype=np.float_)
+    vec1 = np.array([-1, -2, 5, -2, -2], dtype=np.float_)
 
     mat2 = random_banded(N, N//10)
     vec2 = np.random.rand(N)
