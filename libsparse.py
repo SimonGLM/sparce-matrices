@@ -134,7 +134,8 @@ class sparse(object):
                [3.0, 4.0]])
         '''
         if type(value) != int and type(value) != float:
-            raise TypeError('Value is of type {}, but needs to be int or float.'.format(type(value)))
+            raise TypeError(
+                'Value is of type {}, but needs to be int or float.'.format(type(value)))
         if type(value) == int:
             value = float(value)
         if len(key) != 2:
@@ -259,7 +260,8 @@ class sparse(object):
             # self.CSR = self.construct_CSR(array)
             self.CSR = self.construct_CSR_fast(array)
         else:
-            raise ValueError('Sparsity should be in half-open interval [0,1), but is {:.3f}'.format(self.sparsity))
+            raise ValueError(
+                'Sparsity should be in half-open interval [0,1), but is {:.3f}'.format(self.sparsity))
 
         pass
 
@@ -288,7 +290,8 @@ class sparse(object):
                     val += vec[self.CSR['JCOL'][j]] * self.CSR['AVAL'][j]
                 outvec.append(val)
         else:
-            raise ValueError('Shape of vec must be ({},), but is {}.'.format(n, vec.shape))
+            raise ValueError(
+                'Shape of vec must be ({},), but is {}.'.format(n, vec.shape))
 
         return np.array(outvec)
 
@@ -355,7 +358,8 @@ def lu_factor(array):
     > `U` : Upper triangular
     '''
     if not quadratic(array):
-        raise AssertionError('LU decomposition is not possible for non-quadratic matrices.')
+        raise AssertionError(
+            'LU decomposition is not possible for non-quadratic matrices.')
     N = array.shape[0]
     P = np.eye(N)
     L = np.eye(N)
@@ -414,7 +418,8 @@ class linsys(object):
 
     def __init__(self, A, b):
         if type(A) not in [sparse, np.ndarray]:
-            raise TypeError('Matrix A has to be of type sp.sparse or np.ndarray')
+            raise TypeError(
+                'Matrix A has to be of type sp.sparse or np.ndarray')
         self.matrix = A
         self.target_vector = b if (type(b) == np.ndarray) else np.array(b)
         self.shape = A.shape
@@ -455,7 +460,7 @@ class linsys(object):
         '''
         Author: Henrik Spielvogel
 
-        Solving a dense linear system using the conjugate-gradient-method
+        Solving a linear system using the conjugate-gradient-method
 
         Returns:
         --------
@@ -472,7 +477,8 @@ class linsys(object):
         elif type(init_guess) == np.ndarray and init_guess.shape[0] == n:
             x = init_guess
         else:
-            raise ValueError('init_guess must be list or np.ndarray of length {}.'.format(n))
+            raise ValueError(
+                'init_guess must be list or np.ndarray of length {}.'.format(n))
 
         r = mat.dot(x) - vec
         p = -r
@@ -496,71 +502,59 @@ class linsys(object):
 
         return sol
 
-    def solve(self, sparse=False, method='scipy'):
+    def solve(self, method='scipy'):
+        '''
+        Author: Henrik Spielvogel
+
+        Solving linear systems using scipy or the implemented methods above
+
+        Returns:
+        --------
+        > `sol`: np.ndarray solution vector x of the linear system Ax=b
+
+        '''
         mat = self.matrix
         vec = self.target_vector
 
         implemented = ['scipy', 'lu', 'cg']
-        if method not in implemented:
-            raise NotImplementedError('Method `{}` unknown. Implemented methods are {}'.format(method, implemented))
 
-        if sparse:
-            # needs routine for solving sparse systems
-            raise NotImplementedError
-        else:
-            if method == 'scipy':
+        if method not in implemented:
+            raise NotImplementedError(
+                'Method `{}` unknown. Implemented methods are {}'.format(method, implemented))
+
+        if method == 'scipy':
+            if type(mat) == sparse:
+                sol = scipy.sparse.linalg.spsolve(
+                    scipy.sparse.csr_matrix(mat.toarray()), vec)
+            else:
                 sol = scipy.linalg.solve(mat, vec)
-            elif method == 'lu':
-                sol = self.lu_solve()
-            elif method == 'cg':
-                sol = self.cg_solve()
+        elif method == 'lu':
+            sol = self.lu_solve()
+        elif method == 'cg':
+            sol = self.cg_solve()
         return sol
 
 
 if __name__ == "__main__":
     rng: np.random.Generator  # hint for IntelliSense
-    N = 10
-    a = np.random.randint(-3, 3, (N, N))
-    a = np.eye(N)+((a+np.transpose(a))/2)
-
-    mat1 = A = np.array([[-3,  1, -1,  0, -1],
-                         [0,  1,  0,  1,  0],
-                         [-1, -1, -3, -1,  0],
-                         [0,  1, -1,  2,  0],
-                         [0,  1, -1,  1, -1]], dtype=np.float_)
-    vec1 = np.array([-1, -2, 5, -2, -2], dtype=np.float_)
+    N = 50
 
     mat2 = random_banded(N, N//10)
     vec2 = np.random.rand(N)
 
-    from timeit import default_timer as timer
-    sys = linsys(mat2, vec2)
+    mats = sparse(mat2)
+    syss = linsys(mats, vec2)
+    sysd = linsys(mat2, vec2)
 
-    start1 = timer()
-    sol1 = sys.solve(method='scipy')
-    t1 = timer()-start1
+    sols = syss.lu_solve()
 
-    start2 = timer()
-    sol2 = sys.solve(method='lu')
-    t2 = timer() - start2
+    sols = syss.solve(method='scipy')
 
-    start3 = timer()
-    sol3 = sys.cg_solve(init_guess=np.random.rand(sys.N-1))
-    t3 = timer() - start3
-
-    print('Scipy took {:1.5f} seconds'.format(t1))
-    print('LU-Decomp took {:1.5f} seconds'.format(t2))
-    print('Conjugate-Gradient-Method took {:1.5f} seconds'.format(t3))
-
-    print('scipy == LU: {}'.format(np.allclose(sol1, sol2)))
-    print('scipy == CG: {}'.format(np.allclose(sol1, sol3, atol=1e-4)))
-
+    # print(np.allclose(sold, sols))
     pass
 
 
 '''
 TODO Tasks:
-  > CG-Method for sparse
-  > Gaussian elimination
 
 '''
