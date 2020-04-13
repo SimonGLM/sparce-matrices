@@ -200,7 +200,7 @@ class sparse(object):
             indices = np.nonzero(row)[0]
             jcol = np.append(jcol, indices)
             aval = np.append(aval, np.take(row, indices))
-            irow = np.append(irow, len(aval)-1)
+            irow = np.append(irow, len(aval))
         csr = {'AVAL': list(aval), 'JCOL': list(jcol), 'IROW': list(irow)}
         return csr
 
