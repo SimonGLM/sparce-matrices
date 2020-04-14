@@ -66,7 +66,7 @@ class sparse(object):
         self.sparsity = 1 - np.count_nonzero(temp)/temp.size
         self.shape = temp.shape
         self.T = self.transpose
-        self._choose_scheme(temp)
+        self.CSR = self.construct_CSR_fast(temp)
         del temp
         self.N = self.shape[0] if quadratic(self) else None
 
@@ -242,28 +242,6 @@ class sparse(object):
         '''
         evals = scipy.sparse.linalg.eigs(self.toarray())
         return np.alltrue(evals[0] > 0)
-
-    def _choose_scheme(self, array):
-        '''
-        Author: Simon Glennemeier-Marke
-
-        Decide which storage scheme to use based on matrix density.
-
-        Args:
-        > `array` : np.ndarray
-        '''
-        if 1 > self.sparsity >= .5:
-            # self.CSR = self.construct_CSR(array)
-            self.CSR = self.construct_CSR_fast(array)
-        elif .5 > self.sparsity >= 0:
-            print('NotImplementedError: falling back to implemented methods')
-            # self.CSR = self.construct_CSR(array)
-            self.CSR = self.construct_CSR_fast(array)
-        else:
-            raise ValueError(
-                'Sparsity should be in half-open interval [0,1), but is {:.3f}'.format(self.sparsity))
-
-        pass
 
     def _vdot(self, vec: np.ndarray):
         '''
