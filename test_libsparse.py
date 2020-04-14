@@ -5,6 +5,23 @@ import progressbar
 import matplotlib.pyplot as plt
 import numpy as np
 import scipy
+import pytest
+from hypothesis import given, settings
+from hypothesis.strategies import lists, integers, floats, tuples
+
+VALUE_RANGE = (-100, 100)
+
+
+@given(int_array=lists(lists(integers(min_value=VALUE_RANGE[0], max_value=VALUE_RANGE[1]))),
+       float_array=lists(lists(integers(min_value=VALUE_RANGE[0], max_value=VALUE_RANGE[1]))))
+def test_csr_construct(int_array, float_array):
+    """
+    Author: Simon Glennemeier-Marke
+    """
+    assert np.alltrue(sp.sparse(int_array).toarray() == scipy.sparse.construct.csr_matrix(
+        tuple(sp.sparse(int_array).CSR.values())).toarray())
+    assert np.alltrue(sp.sparse(float_array).toarray() == scipy.sparse.construct.csr_matrix(
+        tuple(sp.sparse(float_array).CSR.values())).toarray())
 
 
 def test_mem_overhead():
@@ -29,6 +46,7 @@ def test_mem_overhead():
     ax1.set_ylabel("bytes")
     ax1.legend()
     plt.savefig(name + ".png")
+    assert True
 
 
 def test_mem_efficiency():
@@ -53,9 +71,11 @@ def test_mem_efficiency():
     ax1.set_xlabel("density")
     ax1.set_ylabel("bytes")
     ax1.legend()
-    plt.savefig(name+".png")
+    plt.savefig(name + ".png")
+    assert True
 
 
 if __name__ == "__main__":
-    test_mem_overhead()
-    test_mem_efficiency()
+    # test_mem_overhead()
+    # test_mem_efficiency()
+    pass
