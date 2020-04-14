@@ -1,4 +1,5 @@
 launch.json
 settings.json
 .ropeproject/
+.hypothesis/
 __pycache__/

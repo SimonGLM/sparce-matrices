@@ -63,7 +63,10 @@ class sparse(object):
 
     def __init__(self, array):
         temp = array if (type(array) == np.ndarray) else np.array(array)
-        self.sparsity = 1 - np.count_nonzero(temp)/temp.size
+        if np.count_nonzero(temp) == 0:
+            # print(temp)
+            raise ValueError("Sparse arrays can not be all zeros")
+        self.sparsity = 1 - np.count_nonzero(temp) / temp.size
         self.shape = temp.shape
         self.T = self.transpose
         self.CSR = self.construct_CSR_fast(temp)
