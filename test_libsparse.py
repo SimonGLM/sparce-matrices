@@ -7,13 +7,23 @@ import numpy as np
 import scipy
 import pytest
 from hypothesis import given, settings
-from hypothesis.strategies import lists, integers, floats, tuples
+from hypothesis.strategies import lists, integers, floats, tuples, composite
 from hypothesis.extra.numpy import arrays
 
 MIN_VALUE = 1
 MAX_VALUE = 100
 SHAPE = (50, 50)
 
+
+@composite
+def shape_generator(draw):
+    unequal = draw(tuples(integers(min_value=2, max_value=100),
+                          integers(min_value=2, max_value=100)).filter(lambda x: x[0] != x[1]))
+    equal = draw(tuples(integers(min_value=2, max_value=100),
+                        integers(min_value=2, max_value=100)).filter(lambda x: x[0] == x[1]))
+    shape = (equal, unequal)[np.random.choice([0, 1])]
+
+    return shape
 
 @given(int_array=arrays("int32", shape=SHAPE, elements=integers(min_value=MIN_VALUE, max_value=MAX_VALUE)),
        float_array=arrays("float64", shape=SHAPE, elements=floats(min_value=MIN_VALUE, max_value=MAX_VALUE)))
@@ -33,6 +43,31 @@ def test_zeros_valueerror():
     """
     with pytest.raises(ValueError):
         assert sp.sparse(np.zeros((10, 10)))
+
+
+@given(in1=arrays("float64", shape=SHAPE, elements=floats(min_value=MIN_VALUE, max_value=MAX_VALUE)))
+def test_matrix_algebra(in1):
+    """
+    Author: Simon Glennemeier-Marke
+    """
+    sp1 = sp.sparse(in1)
+    # Transposition
+    assert np.allclose(in1.transpose(), sp1.T().toarray())
+
+
+def test_matrix_matrix_algebra(in1, in2):
+    sp1 = sp.sparse(in1)
+    sp2 = sp.sparse(in2)
+    assert np.allclose(in1+in2, sp1.__add__(sp2))
+    assert np.allclose(in1-in2, sp1.__sub__(sp2))
+    assert np.allclose(in1@in2,  sp1.__mul__(sp2))
+
+
+@given(in1=arrays("float64", shape=shape_generator(), elements=floats(min_value=MIN_VALUE, max_value=MAX_VALUE)))
+def test_quadratic(in1):
+    np_bool = (in1.shape[0] == in1.shape[0])
+    sp_bool = sp.quadratic(sp.sparse(in1))
+    assert np_bool == sp_bool
 
 
 def test_mem_overhead():

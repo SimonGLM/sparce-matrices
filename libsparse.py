@@ -360,7 +360,11 @@ def lu_factor(array):
 
 def quadratic(array):
     '''Author: Simon Glennemeier-Marke'''
-    return bool(array.shape[0] == array.shape[1])
+    try:
+        return bool(array.shape[0] == array.shape[1])
+    except:
+        Att
+        raise AttributeError("\'array\' does not have attribute \'shape\'")
 
 
 def random_banded(size, num_diags):
