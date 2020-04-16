@@ -58,6 +58,8 @@ def test_matrix_algebra(in1):
     assert np.allclose(in1.transpose(), sp1.T().toarray())
 
 
+@given(in1=arrays("float64", shape=SHAPE, elements=floats(min_value=MIN_VALUE, max_value=MAX_VALUE)),
+       in2=arrays("float64", shape=SHAPE, elements=floats(min_value=MIN_VALUE, max_value=MAX_VALUE)))
 def test_matrix_matrix_algebra(in1, in2):
     """
     Author: Simon Glennemeier-Marke
@@ -77,6 +79,8 @@ def test_quadratic(in1):
     np_bool = (in1.shape[0] == in1.shape[0])
     sp_bool = sp.quadratic(sp.sparse(in1))
     assert np_bool == sp_bool
+    with pytest.raises(AttributeError):
+        assert sp.quadratic("I cannot have a shape attribute")
 
 
 def test_mem_overhead():
