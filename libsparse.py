@@ -34,6 +34,27 @@ import numpy as np
 np.set_printoptions(edgeitems=8, linewidth=180)
 
 
+def shape_govenour(axis=None):
+    # TODO Needs doc
+    """
+    Author: Simon Glennemeier-Marke
+    """
+    def middle(func):
+        def check(obj1, obj2):
+            if axis is None:
+                assert obj1.shape == obj2.shape
+                return func(obj1, obj2)
+            assert (type(axis) == tuple) & (len(axis) == 2)
+            axis1, axis2 = axis
+            if type(obj1) is not type(obj2):
+                raise TypeError("Objects passed to {} of incompatible types".format(func.__name__))
+            assert obj1.shape[axis1-1] == obj2.shape[axis2-1]
+            return func(obj1, obj2)
+
+        return check
+    return middle
+
+
 class sparse(object):
     # TODO NEEDSDOC
     '''
@@ -76,6 +97,23 @@ class sparse(object):
     def __repr__(self):
         return '<sparse matrix of shape {} and sparsity {:.2f}>'.format(self.shape, self.sparsity)
 
+    @shape_govenour(axis=None)
+    def __add__(self, other):
+        NEW = sparse(self.toarray())
+        for i in range(self.shape[0]):
+            for j in range(self.shape[1]):
+                NEW[i, j] = self[i, j] + other[i, j]
+        return NEW
+
+    @shape_govenour(axis=None)
+    def __sub__(self, other):
+        NEW = sparse(self.toarray())
+        for i in range(self.shape[0]):
+            for j in range(self.shape[1]):
+                NEW[i, j] = self[i, j] - other[i, j]
+        return NEW
+
+    @shape_govenour(axis=(1, 2))
     def __mul__(self, other):
         return self.dot(other)
 
@@ -136,10 +174,12 @@ class sparse(object):
         array([[6.0, 2.0]
                [3.0, 4.0]])
         '''
-        if type(value) != int and type(value) != float:
-            raise TypeError('Value is of type {}, but needs to be int or float.'.format(type(value)))
-        if type(value) == int:
-            value = float(value)
+        try:
+            assert float(value)
+        except:
+            if type(value) != int and type(value) != float:
+                raise TypeError('Value is of type {}, but needs to be int or float.'.format(type(value)))
+
         if len(key) != 2:
             raise IndexError('Index has to be tuple.')
         i, j = key
@@ -274,6 +314,7 @@ class sparse(object):
 
         return np.array(outvec)
 
+    @shape_govenour(axis=(1, 2))
     def dot(self, other):
         '''
         Author: Simon Glennemeier-Marke
@@ -297,10 +338,6 @@ class sparse(object):
             return self._vdot(other)
         if type(other) == np.ndarray:  # check for ndarray
             return self.toarray()@other
-
-        if self.shape[1] != other.shape[0]:
-            raise AttributeError(
-                'Shapes do not match {}, {}'.format(self.shape, other.shape))
 
         result = np.zeros((self.shape[0], other.shape[1]))
         for i in range(self.shape[0]):
@@ -363,7 +400,6 @@ def quadratic(array):
     try:
         return bool(array.shape[0] == array.shape[1])
     except:
-        Att
         raise AttributeError("\'array\' does not have attribute \'shape\'")
 
 
@@ -505,41 +541,6 @@ class linsys(object):
 
 
 if __name__ == "__main__":
-    N = 10
-    a = np.random.randint(-3, 3, (N, N))
-    a = np.eye(N)+((a+np.transpose(a))/2)
-
-    mat1 = A = np.array([[-3,  1, -1,  0, -1],
-                         [0,  1,  0,  1,  0],
-                         [-1, -1, -3, -1,  0],
-                         [0,  1, -1,  2,  0],
-                         [0,  1, -1,  1, -1]], dtype=np.float_)
-    vec1 = np.array([-1, -2, 5, -2, -2], dtype=np.float_)
-
-    mat2 = random_banded(N, N//10)
-    vec2 = np.random.rand(N)
-
-    from timeit import default_timer as timer
-    sys = linsys(mat2, vec2)
-
-    start1 = timer()
-    sol1 = sys.solve(method='scipy')
-    t1 = timer()-start1
-
-    start2 = timer()
-    sol2 = sys.solve(method='lu')
-    t2 = timer() - start2
-
-    start3 = timer()
-    sol3 = sys.cg_solve(init_guess=np.random.rand(sys.N-1))
-    t3 = timer() - start3
-
-    print('Scipy took {:1.5f} seconds'.format(t1))
-    print('LU-Decomp took {:1.5f} seconds'.format(t2))
-    print('Conjugate-Gradient-Method took {:1.5f} seconds'.format(t3))
-
-    print('scipy == LU: {}'.format(np.allclose(sol1, sol2)))
-    print('scipy == CG: {}'.format(np.allclose(sol1, sol3, atol=1e-4)))
 
     pass
 
