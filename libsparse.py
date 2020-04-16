@@ -412,7 +412,7 @@ class linsys(object):
         self.N = A.shape[0]
 
     def __repr__(self):
-        return '<linsys of dim: {} >'.format(self.N)
+        return '<linsys of dimension: {} >'.format(self.N)
 
     def lu_solve(self):
         '''
@@ -442,7 +442,7 @@ class linsys(object):
 
         return sol
 
-    def cg_solve(self, init_guess=None, TOL=1e-8):
+    def cg_solve(self, init_guess=None, TOL=1e-15):
         '''
         Author: Henrik Spielvogel
 
@@ -455,6 +455,13 @@ class linsys(object):
         n = self.N
         mat = self.matrix
         vec = self.target_vector
+
+        try:
+            assert mat.check_posdef()
+            assert np.alltrue(mat.T().toarray() == mat.toarray())
+        except:
+            raise ValueError(
+                'Matrix needs to be symmetric and positive definite.')
 
         if init_guess is None:
             x = np.ones(n)
@@ -522,29 +529,6 @@ class linsys(object):
 
 
 if __name__ == "__main__":
-    N = 10
-    a = np.random.randint(-3, 3, (N, N))
-    a = np.eye(N)+((a+np.transpose(a))/2)
-
-    mat1 = A = np.array([[-3,  1, -1,  0, -1],
-                         [0,  1,  0,  1,  0],
-                         [-1, -1, -3, -1,  0],
-                         [0,  1, -1,  2,  0],
-                         [0,  1, -1,  1, -1]], dtype=np.float_)
-    vec1 = np.array([-1, -2, 5, -2, -2], dtype=np.float_)
-
-    mat2 = random_banded(N, N//10)
-    vec2 = np.random.rand(N)
-
-    mats = sparse(mat2)
-    syss = linsys(mats, vec2)
-    sysd = linsys(mat2, vec2)
-
-    sols = syss.lu_solve()
-
-    sols = syss.solve(method='scipy')
-
-    # print(np.allclose(sold, sols))
     pass
 
 
