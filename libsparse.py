@@ -386,6 +386,38 @@ def random_banded(size, num_diags):
     return np.array(scipy.sparse.eye(size)+(mat+np.transpose(mat))/2)
 
 
+def choose_scheme(matrix):
+    '''
+    Author: Henrik Spielvogel
+    Chooses storage scheme based on sparsity of input matrix.
+    Returns:
+    --------
+    > `np.ndarray` : array of self (if sparsity <= 0.9)
+    > `sp.sparse` : sparse object of self (if sparsity > 0.9)
+    '''
+    if type(matrix) == sparse:
+        if matrix.sparsity >= 0.9:
+            print('Chosen storage scheme:   sparse  (sparsity = {:2.2f})'.format(
+                matrix.sparsity))
+            return matrix
+        else:
+            print(
+                'Chosen storage scheme:   dense   (sparsity = {:2.2f})'.format(matrix.sparsity))
+            return matrix.toarray()
+    elif type(matrix) == np.ndarray:
+        sparsity = 1 - np.count_nonzero(matrix)/matrix.size
+        if sparsity >= 0.9:
+            print('Chosen storage scheme:   sparse  (sparsity = {:2.2f})'.format(
+                sparsity))
+            return sparse(matrix)
+        else:
+            print(
+                'Chosen storage scheme:   dense   (sparsity = {:2.2f})'.format(sparsity))
+            return matrix
+    else:
+        raise TypeError('Matrix must be of type `sparse` or `np.ndarray`')
+
+
 class linsys(object):
     '''
     Author: Henrik Spielvogel
@@ -529,6 +561,21 @@ class linsys(object):
 
 
 if __name__ == "__main__":
+    mat = sparse(random_banded(30, 4))
+    outmat = choose_scheme(mat)
+    print(type(outmat))
+
+    mat = sparse(random_banded(30, 3))
+    outmat = choose_scheme(mat)
+    print(type(outmat))
+
+    mat = random_banded(30, 4)
+    outmat = choose_scheme(mat)
+    print(type(outmat))
+
+    mat = random_banded(30, 3)
+    outmat = choose_scheme(mat)
+    print(type(outmat))
     pass
 
 
