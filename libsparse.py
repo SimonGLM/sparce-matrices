@@ -85,7 +85,6 @@ class sparse(object):
     def __init__(self, array):
         temp = array if (type(array) == np.ndarray) else np.array(array)
         if np.count_nonzero(temp) == 0:
-            # print(temp)
             raise ValueError("Sparse arrays can not be all zeros")
         self.sparsity = 1 - np.count_nonzero(temp) / temp.size
         self.shape = temp.shape
@@ -175,10 +174,11 @@ class sparse(object):
                [3.0, 4.0]])
         '''
         try:
-            assert float(value)
+            value = float(value)
         except:
-            if type(value) != int and type(value) != float:
-                raise TypeError('Value is of type {}, but needs to be int or float.'.format(type(value)))
+            if type(value) not in [int, float, np.int, np.float]:
+                raise TypeError(f'Value is of type {type(value)}, but needs to be int or float.')
+            raise TypeError("Value was not castable to float")
 
         if len(key) != 2:
             raise IndexError('Index has to be tuple.')

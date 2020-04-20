@@ -10,7 +10,7 @@ from hypothesis import given, settings
 from hypothesis.strategies import lists, integers, floats, tuples, composite
 from hypothesis.extra.numpy import arrays
 
-MIN_VALUE = 1
+MIN_VALUE = -100
 MAX_VALUE = 100
 SHAPE = (50, 50)
 
@@ -28,9 +28,9 @@ def shape_generator(draw):
 
     return shape
 
-@given(int_array=arrays("int32", shape=SHAPE, elements=integers(min_value=MIN_VALUE, max_value=MAX_VALUE)),
-       float_array=arrays("float64", shape=SHAPE, elements=floats(min_value=MIN_VALUE, max_value=MAX_VALUE)))
-def test_csr_construct(int_array, float_array):
+@given(int_array=arrays(np.int, shape=SHAPE, elements=integers(min_value=MIN_VALUE, max_value=MAX_VALUE).filter(lambda x: np.alltrue(x != np.zeros_like(x)))),
+       float_array=arrays(np.float, shape=SHAPE, elements=floats(min_value=MIN_VALUE, max_value=MAX_VALUE).filter(lambda x: np.alltrue(x != np.zeros_like(x)))))
+def test_nonzero_csr_construct(int_array, float_array):
     """
     Author: Simon Glennemeier-Marke
     """
@@ -48,7 +48,7 @@ def test_zeros_valueerror():
         assert sp.sparse(np.zeros((10, 10)))
 
 
-@given(in1=arrays("float64", shape=SHAPE, elements=floats(min_value=MIN_VALUE, max_value=MAX_VALUE)))
+@given(in1=arrays(np.float, shape=SHAPE, elements=floats(min_value=MIN_VALUE, max_value=MAX_VALUE)).filter(lambda x: np.alltrue(x != np.zeros_like(x))))
 def test_matrix_algebra(in1):
     """
     Author: Simon Glennemeier-Marke
@@ -58,25 +58,25 @@ def test_matrix_algebra(in1):
     assert np.allclose(in1.transpose(), sp1.T().toarray())
 
 
-@given(in1=arrays("float64", shape=SHAPE, elements=floats(min_value=MIN_VALUE, max_value=MAX_VALUE)),
-       in2=arrays("float64", shape=SHAPE, elements=floats(min_value=MIN_VALUE, max_value=MAX_VALUE)))
+@given(in1=arrays(np.float, shape=SHAPE, elements=floats(min_value=MIN_VALUE, max_value=MAX_VALUE)).filter(lambda x: np.alltrue(x != np.zeros_like(x))),
+       in2=arrays(np.float, shape=SHAPE, elements=floats(min_value=MIN_VALUE, max_value=MAX_VALUE)).filter(lambda x: np.alltrue(x != np.zeros_like(x))))
 def test_matrix_matrix_algebra(in1, in2):
     """
     Author: Simon Glennemeier-Marke
     """
     sp1 = sp.sparse(in1)
     sp2 = sp.sparse(in2)
-    assert np.allclose(in1+in2, sp1.__add__(sp2))
-    assert np.allclose(in1-in2, sp1.__sub__(sp2))
-    assert np.allclose(in1@in2,  sp1.__mul__(sp2))
+    assert np.allclose(in1+in2, sp1.__add__(sp2).toarray())
+    assert np.allclose(in1-in2, sp1.__sub__(sp2).toarray())
+    assert np.allclose(in1@in2,  sp1.__mul__(sp2).toarray())
 
 
-@given(in1=arrays("float64", shape=shape_generator(), elements=floats(min_value=MIN_VALUE, max_value=MAX_VALUE)))
+@given(in1=arrays(np.float, shape=tuples(integers(min_value=2, max_value=50), integers(min_value=2, max_value=50)), elements=floats(min_value=MIN_VALUE, max_value=MAX_VALUE)).filter(lambda x: np.alltrue(x != np.zeros_like(x))))
 def test_quadratic(in1):
     """
     Author: Simon Glennemeier-Marke
     """
-    np_bool = (in1.shape[0] == in1.shape[0])
+    np_bool = (in1.shape[0] == in1.shape[1])
     sp_bool = sp.quadratic(sp.sparse(in1))
     assert np_bool == sp_bool
     with pytest.raises(AttributeError):
@@ -89,13 +89,10 @@ def test_mem_overhead():
     """
     size_sparse = []
     size_numpy = []
-    # bar1 = progressbar.ProgressBar(min_value=10, max_value=1000)
     for N in range(10, 1000, 10):
         mat = sp.random_banded(N, N//4)
         size_numpy.append(asizeof.asizeof(mat))
         size_sparse.append(asizeof.asizeof(sp.sparse(mat)))
-        # print(N, size_numpy[-1]//1000, "kB", size_sparse[-1]//1000, "kB")
-        # bar1.update(N)
     fig = plt.figure()
     name = "mem_overhead"
     fig: plt.Figure
@@ -119,13 +116,10 @@ def test_mem_efficiency():
     size_numpy = []
     density = np.delete(np.arange(0, 1, 0.05), 0)
 
-    # bar2 = progressbar.ProgressBar(min_value=0, max_value=1)
     for rho in density:
         mat = scipy.sparse.random(100, 100, density=rho).toarray()
         size_numpy.append(asizeof.asizeof(mat))
         size_sparse.append(asizeof.asizeof(sp.sparse(mat)))
-        # print(rho, str(size_numpy[-1])+" B", str(size_sparse[-1])+" B")
-        # bar2.update(rho)
     fig = plt.figure()
     name = "mem_efficiency"
     fig: plt.Figure
