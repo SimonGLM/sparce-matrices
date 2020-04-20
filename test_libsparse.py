@@ -135,5 +135,44 @@ def test_mem_efficiency():
     assert True
 
 
+# MIN_VALUE = -1e8
+# MAX_VALUE = 1e8
+
+
+@composite
+def system_generator(draw):
+    n = draw(integers(min_value=20, max_value=100))
+    mat = scipy.sparse.random(n, n, density=draw(
+        floats(min_value=0.05, max_value=0.20))).toarray() + np.eye(n)
+    vec = draw(arrays("float64", shape=(n,), elements=floats(
+        min_value=MIN_VALUE, max_value=MAX_VALUE)))
+
+    assert mat.shape[0] == mat.shape[1]
+    return mat, vec
+
+
+@settings(deadline=500)
+@given(
+    insys=system_generator()
+)
+def test_linsys(insys):
+    matrices, vectors = insys
+    sys = sp.linsys(sp.sparse(matrices), vectors)
+
+    sp_sol_scipy = sys.solve(method='scipy')
+    sp_sol_lu = sys.solve(method='lu')
+
+    symm_mat = np.eye(matrices.shape[0])+(matrices+np.transpose(matrices))/2
+    symm_sys = sp.linsys(sp.sparse(symm_mat), vectors)
+    sp_sol_cg = symm_sys.solve(method='cg')
+
+    true_sol = scipy.linalg.solve(matrices, vectors)
+    true_sol_cg = scipy.linalg.solve(symm_mat, vectors)
+
+    assert np.allclose(sp_sol_scipy, true_sol)
+    assert np.allclose(sp_sol_lu, true_sol)
+    assert np.allclose(sp_sol_cg, true_sol_cg, rtol=1e-2)
+
+
 if __name__ == "__main__":
     pass

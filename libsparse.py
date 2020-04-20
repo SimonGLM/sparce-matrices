@@ -310,7 +310,7 @@ class sparse(object):
                     val += vec[self.CSR['JCOL'][j]] * self.CSR['AVAL'][j]
                 outvec.append(val)
         else:
-            raise ValueError('Shape of vec must be ({},), but is {}.'.format(n, vec.shape))
+            raise ValueError(f'Shape of vec must be ({n},), but is {vec.shape}.')
 
         return np.array(outvec)
 
@@ -419,6 +419,38 @@ def random_banded(size, num_diags):
     return np.array(scipy.sparse.eye(size)+(mat+np.transpose(mat))/2)
 
 
+def choose_scheme(matrix):
+    '''
+    Author: Henrik Spielvogel
+    Chooses storage scheme based on sparsity of input matrix.
+    Returns:
+    --------
+    > `np.ndarray` : array of self (if sparsity <= 0.9)
+    > `sp.sparse` : sparse object of self (if sparsity > 0.9)
+    '''
+    if type(matrix) == sparse:
+        if matrix.sparsity >= 0.9:
+            print('Chosen storage scheme:   sparse  (sparsity = {:2.2f})'.format(
+                matrix.sparsity))
+            return matrix
+        else:
+            print(
+                'Chosen storage scheme:   dense   (sparsity = {:2.2f})'.format(matrix.sparsity))
+            return matrix.toarray()
+    elif type(matrix) == np.ndarray:
+        sparsity = 1 - np.count_nonzero(matrix)/matrix.size
+        if sparsity >= 0.9:
+            print('Chosen storage scheme:   sparse  (sparsity = {:2.2f})'.format(
+                sparsity))
+            return sparse(matrix)
+        else:
+            print(
+                'Chosen storage scheme:   dense   (sparsity = {:2.2f})'.format(sparsity))
+            return matrix
+    else:
+        raise TypeError('Matrix must be of type `sparse` or `np.ndarray`')
+
+
 class linsys(object):
     '''
     Author: Henrik Spielvogel
@@ -444,7 +476,7 @@ class linsys(object):
         self.N = A.shape[0]
 
     def __repr__(self):
-        return '<linsys of dim: {} >'.format(self.N)
+        return '<linsys of dimension: {} >'.format(self.N)
 
     def lu_solve(self):
         '''
@@ -474,11 +506,11 @@ class linsys(object):
 
         return sol
 
-    def cg_solve(self, init_guess=None, TOL=1e-8):
+    def cg_solve(self, init_guess=None, TOL=1e-15):
         '''
         Author: Henrik Spielvogel
 
-        Solving a dense linear system using the conjugate-gradient-method
+        Solving a linear system using the conjugate-gradient-method
 
         Returns:
         --------
@@ -488,6 +520,13 @@ class linsys(object):
         mat = self.matrix
         vec = self.target_vector
 
+        try:
+            assert mat.check_posdef()
+            assert np.alltrue(mat.T().toarray() == mat.toarray())
+        except:
+            raise ValueError(
+                'Matrix needs to be symmetric and positive definite.')
+
         if init_guess is None:
             x = np.ones(n)
         elif type(init_guess) == list and len(init_guess) == n:
@@ -495,7 +534,7 @@ class linsys(object):
         elif type(init_guess) == np.ndarray and init_guess.shape[0] == n:
             x = init_guess
         else:
-            raise ValueError('init_guess must be list or np.ndarray of length {}.'.format(n))
+            raise ValueError(f'init_guess must be list or np.ndarray of length {n}.')
 
         r = mat.dot(x) - vec
         p = -r
@@ -519,24 +558,36 @@ class linsys(object):
 
         return sol
 
-    def solve(self, sparse=False, method='scipy'):
+    def solve(self, method='scipy'):
+        '''
+        Author: Henrik Spielvogel
+
+        Solving linear systems using scipy or the implemented methods above
+
+        Returns:
+        --------
+        > `sol`: np.ndarray solution vector x of the linear system Ax=b
+
+        '''
         mat = self.matrix
         vec = self.target_vector
 
         implemented = ['scipy', 'lu', 'cg']
-        if method not in implemented:
-            raise NotImplementedError('Method `{}` unknown. Implemented methods are {}'.format(method, implemented))
 
-        if sparse:
-            # needs routine for solving sparse systems
-            raise NotImplementedError
-        else:
-            if method == 'scipy':
+        if method not in implemented:
+            raise NotImplementedError(
+                'Method `{}` unknown. Implemented methods are {}'.format(method, implemented))
+
+        if method == 'scipy':
+            if type(mat) == sparse:
+                sol = scipy.sparse.linalg.spsolve(
+                    scipy.sparse.csr_matrix(mat.toarray()), vec)
+            else:
                 sol = scipy.linalg.solve(mat, vec)
-            elif method == 'lu':
-                sol = self.lu_solve()
-            elif method == 'cg':
-                sol = self.cg_solve()
+        elif method == 'lu':
+            sol = self.lu_solve()
+        elif method == 'cg':
+            sol = self.cg_solve()
         return sol
 
 
@@ -547,7 +598,5 @@ if __name__ == "__main__":
 
 '''
 TODO Tasks:
-  > CG-Method for sparse
-  > Gaussian elimination
 
 '''
