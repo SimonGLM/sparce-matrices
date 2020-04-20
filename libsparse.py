@@ -34,6 +34,18 @@ import numpy as np
 np.set_printoptions(edgeitems=8, linewidth=180)
 
 
+class AllZeroError(BaseException):
+    """
+    All elemts of array are zero
+    """
+
+
+class ShapeGovenourError(BaseException):
+    """
+    Improper objects for sparse array operation
+    """
+
+
 def shape_govenour(axis=None):
     # TODO Needs doc
     """
@@ -42,13 +54,20 @@ def shape_govenour(axis=None):
     def middle(func):
         def check(obj1, obj2):
             if axis is None:
-                assert obj1.shape == obj2.shape
+                if obj1.shape != obj2.shape:
+                    raise ShapeGovenourError(
+                        f"Objects of dissimilar dimension cannot be added")
                 return func(obj1, obj2)
+
             assert (type(axis) == tuple) & (len(axis) == 2)
             axis1, axis2 = axis
-            if type(obj1) is not type(obj2):
-                raise TypeError("Objects passed to {} of incompatible types".format(func.__name__))
-            assert obj1.shape[axis1-1] == obj2.shape[axis2-1]
+
+            cond1 = (type(obj1) in [sparse, np.ndarray, scipy.sparse.spmatrix]) and (
+                type(obj2) in [sparse, np.ndarray, scipy.sparse.spmatrix])
+            if not cond1:
+                raise ShapeGovenourError(f"Objects passed to {func.__name__} of incompatible types")
+
+            assert obj1.shape[axis1 - 1] == obj2.shape[axis2 - 1]
             return func(obj1, obj2)
 
         return check
@@ -285,6 +304,47 @@ class sparse(object):
         evals = scipy.sparse.linalg.eigs(self.toarray())
         return np.alltrue(evals[0] > 0)
 
+    def dot(self, other):
+        '''
+        Author: Simon Glennemeier-Marke
+
+        Compute the dot product of a matrix and either another matrix or a vector
+
+        If other is a matrix we call `self._mdot(other)`.
+        If other is a vector we call `self._vdot(other)`.
+        If other is a ndarray we let numpy do the work.
+        This is to enhance comability with numpy methods of matrix multiplication.
+
+        Operator overloading:
+        ---------------------
+        >>> A @ B
+
+        Returns:
+        --------
+        > <class 'sparse'> of multiplied matrices
+        > or
+        > <class 'numpy.ndarray'> in case of a multiplication with a vector
+        '''
+        if type(other) != sparse and len(other.shape) == 1:  # check for vector
+            return self._vdot(other)
+        if type(other) == np.ndarray:  # check for ndarray
+            return self.toarray() @ other
+        return self._mdot(other)
+
+    @shape_govenour(axis=(1, 2))
+    def _mdot(self, other):
+        '''
+        Author: Simon Glennemeier-Marke
+        '''
+        result = np.zeros((self.shape[0], other.shape[1]))
+        for i in range(self.shape[0]):
+            for j in range(other.shape[1]):
+                row = self[i, None]
+                col = other[None, j]
+                result[i, j] = sum([r*c for r, c in zip(row, col)])
+        return sparse(result)
+
+    @shape_govenour(axis=(1, 1))
     def _vdot(self, vec: np.ndarray):
         '''
         Author: Henrik Spielvogel
@@ -313,39 +373,6 @@ class sparse(object):
             raise ValueError(f'Shape of vec must be ({n},), but is {vec.shape}.')
 
         return np.array(outvec)
-
-    @shape_govenour(axis=(1, 2))
-    def dot(self, other):
-        '''
-        Author: Simon Glennemeier-Marke
-
-        Compute the dot product of a matrix and either another matrix or a vector
-
-        If other is a vector we call `self._vdot(other)`.
-        This is to enhance comability with numpy methods of matrix multiplication.
-
-        Operator overloading:
-        ---------------------
-        >>> A * B
-
-        Returns:
-        --------
-        > <class 'sparse'> of multiplied matrices
-        > or
-        > <class 'numpy.ndarray'> in case of a multiplication with a vector
-        '''
-        if type(other) != sparse and len(other.shape) == 1:  # check for vector
-            return self._vdot(other)
-        if type(other) == np.ndarray:  # check for ndarray
-            return self.toarray()@other
-
-        result = np.zeros((self.shape[0], other.shape[1]))
-        for i in range(self.shape[0]):
-            for j in range(other.shape[1]):
-                row = self[i, None]
-                col = other[None, j]
-                result[i, j] = sum([r*c for r, c in zip(row, col)])
-        return sparse(result)
 
     def show(self):
         '''
