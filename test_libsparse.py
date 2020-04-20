@@ -1,14 +1,15 @@
-import libsparse as sp
 import sys
-from pympler import asizeof
-# import progressbar
+
 import matplotlib.pyplot as plt
 import numpy as np
-import scipy
 import pytest
+import scipy
 from hypothesis import given, settings
-from hypothesis.strategies import lists, integers, floats, tuples, composite
 from hypothesis.extra.numpy import arrays
+from hypothesis.strategies import composite, floats, integers, lists, tuples
+from pympler import asizeof
+
+import libsparse as sp
 
 MIN_VALUE = -100
 MAX_VALUE = 100
@@ -28,23 +29,30 @@ def shape_generator(draw):
 
     return shape
 
-@given(int_array=arrays(np.int, shape=SHAPE, elements=integers(min_value=MIN_VALUE, max_value=MAX_VALUE).filter(lambda x: np.alltrue(x != np.zeros_like(x)))),
-       float_array=arrays(np.float, shape=SHAPE, elements=floats(min_value=MIN_VALUE, max_value=MAX_VALUE).filter(lambda x: np.alltrue(x != np.zeros_like(x)))))
+@given(int_array=arrays(np.int, shape=SHAPE, elements=integers(min_value=MIN_VALUE, max_value=MAX_VALUE)),
+       float_array=arrays(np.float, shape=SHAPE, elements=floats(min_value=MIN_VALUE, max_value=MAX_VALUE)))
 def test_nonzero_csr_construct(int_array, float_array):
     """
     Author: Simon Glennemeier-Marke
     """
-    assert np.alltrue(sp.sparse(int_array).toarray() == scipy.sparse.construct.csr_matrix(
-        tuple(sp.sparse(int_array).CSR.values())).toarray())
-    assert np.alltrue(sp.sparse(float_array).toarray() == scipy.sparse.construct.csr_matrix(
-        tuple(sp.sparse(float_array).CSR.values())).toarray())
+    int_zero = np.alltrue(int_array == np.zeros_like(int_array))
+    float_zero = np.alltrue(float_array == np.zeros_like(float_array))
+    if int_zero or float_zero:
+        with pytest.raises(sp.AllZeroError):
+            assert sp.sparse(int_array)
+            assert sp.sparse(float_array)
+    else:
+        assert np.alltrue(sp.sparse(int_array).toarray() == scipy.sparse.construct.csr_matrix(
+            tuple(sp.sparse(int_array).CSR.values())).toarray())
+        assert np.alltrue(sp.sparse(float_array).toarray() == scipy.sparse.construct.csr_matrix(
+            tuple(sp.sparse(float_array).CSR.values())).toarray())
 
 
-def test_zeros_valueerror():
+def test_AllZeroError():
     """
     Author: Simon Glennemeier-Marke
     """
-    with pytest.raises(ValueError):
+    with pytest.raises(sp.AllZeroError):
         assert sp.sparse(np.zeros((10, 10)))
 
 
@@ -58,17 +66,40 @@ def test_matrix_algebra(in1):
     assert np.allclose(in1.transpose(), sp1.T().toarray())
 
 
-@given(in1=arrays(np.float, shape=SHAPE, elements=floats(min_value=MIN_VALUE, max_value=MAX_VALUE)).filter(lambda x: np.alltrue(x != np.zeros_like(x))),
-       in2=arrays(np.float, shape=SHAPE, elements=floats(min_value=MIN_VALUE, max_value=MAX_VALUE)).filter(lambda x: np.alltrue(x != np.zeros_like(x))))
+@given(in1=arrays(np.float, shape=SHAPE, elements=floats(min_value=MIN_VALUE, max_value=MAX_VALUE)),
+       in2=arrays(np.float, shape=SHAPE, elements=floats(min_value=MIN_VALUE, max_value=MAX_VALUE)))
 def test_matrix_matrix_algebra(in1, in2):
     """
     Author: Simon Glennemeier-Marke
     """
-    sp1 = sp.sparse(in1)
-    sp2 = sp.sparse(in2)
-    assert np.allclose(in1+in2, sp1.__add__(sp2).toarray())
-    assert np.allclose(in1-in2, sp1.__sub__(sp2).toarray())
-    assert np.allclose(in1@in2,  sp1.__mul__(sp2).toarray())
+    in1_zeros = np.allclose(in1, np.zeros_like(in1))
+    in2_zeros = np.allclose(in2, np.zeros_like(in2))
+    if in1_zeros or in2_zeros:
+        with pytest.raises(sp.AllZeroError):
+            sp.sparse(in1)
+            sp.sparse(in2)
+    else:
+        sp1 = sp.sparse(in1)
+        sp2 = sp.sparse(in2)
+        assert np.allclose(in1+in2, sp1.__add__(sp2).toarray(), sp1.__add__(in1).toarray())
+        assert np.allclose(in1+in2, (sp1+sp2).toarray(), (sp1+in1).toarray())
+        assert np.allclose(in1-in2, sp1.__sub__(sp2).toarray(), sp1.__sub__(in1).toarray())
+        assert np.allclose(in1-in2, (sp1-sp2).toarray(), (sp1-in1).toarray())
+        assert np.allclose(in1@in2,  sp1.__matmul__(sp2).toarray(), sp1.__matmul__(in1).toarray())
+        assert np.allclose(in1@in2, (sp1@sp2).toarray(), (sp1@in2).toarray())
+
+
+@given(t_mat=arrays(np.float, shape=SHAPE, elements=floats(min_value=MIN_VALUE, max_value=MAX_VALUE)).filter(lambda x: np.alltrue(x != np.zeros_like(x))),
+       t_vec=arrays(np.float, shape=SHAPE[0], elements=floats(min_value=MIN_VALUE, max_value=MAX_VALUE)))
+def test_matrix_vector_Algebra(t_mat, t_vec):
+    sp1 = sp.sparse(t_mat)
+    with pytest.raises(sp.ShapeGovenourError):
+        assert np.allclose(t_mat+t_vec, sp1.__add__(t_vec))
+        assert np.allclose(t_mat+t_vec, (sp1+t_vec))
+        assert np.allclose(t_mat-t_vec, sp1.__sub__(t_vec))
+        assert np.allclose(t_mat-t_vec, (sp1-t_vec))
+    assert np.allclose(t_mat@t_vec,  sp1.__matmul__(t_vec))
+    assert np.allclose(t_mat @ t_vec, (sp1 @ t_vec))
 
 
 @given(in1=arrays(np.float, shape=tuples(integers(min_value=2, max_value=50), integers(min_value=2, max_value=50)), elements=floats(min_value=MIN_VALUE, max_value=MAX_VALUE)).filter(lambda x: np.alltrue(x != np.zeros_like(x))))

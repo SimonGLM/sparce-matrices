@@ -21,17 +21,18 @@ sp.random_banded(size: int, num_diags: int):
 > I.e. it only has non-zero values on num_diags centered diagonals.
 
 
-This library is part of a project done as an end-term assignment in the 'Scientific Programming' course at the Justus-Liebig-University in Giessen, Germany.
+This library is part of a project done as an end-term assignment in the 'Scientific Programming' course
+at the Justus-Liebig-University in Giessen, Germany.
 '''
 
 import matplotlib.pyplot as plt
-import scipy.linalg
-import scipy.sparse.linalg
-import scipy.sparse
-import scipy
 import numpy as np
+import scipy
+import scipy.linalg
+import scipy.sparse
+import scipy.sparse.linalg
 
-np.set_printoptions(edgeitems=8, linewidth=180)
+np.set_printoptions(edgeitems=8, linewidth=120)
 
 
 class AllZeroError(BaseException):
@@ -74,7 +75,7 @@ def shape_govenour(axis=None):
     return middle
 
 
-class sparse(object):
+class sparse():
     # TODO NEEDSDOC
     '''
     Author: Simon Glennemeier-Marke & Henrik Spielvogel
@@ -104,7 +105,7 @@ class sparse(object):
     def __init__(self, array):
         temp = array if (type(array) == np.ndarray) else np.array(array)
         if np.count_nonzero(temp) == 0:
-            raise ValueError("Sparse arrays can not be all zeros")
+            raise AllZeroError("Sparse arrays can not be all zeros")
         self.sparsity = 1 - np.count_nonzero(temp) / temp.size
         self.shape = temp.shape
         self.T = self.transpose
@@ -131,8 +132,7 @@ class sparse(object):
                 NEW[i, j] = self[i, j] - other[i, j]
         return NEW
 
-    @shape_govenour(axis=(1, 2))
-    def __mul__(self, other):
+    def __matmul__(self, other):
         return self.dot(other)
 
     def __getitem__(self, key):
@@ -153,22 +153,22 @@ class sparse(object):
         >>> a[None,2]
         [2.0, 4.0]
         '''
-        if not all([type(key[i]) == int or key[i] == None for i, el in enumerate(key)]):
+        if not all([type(key[i]) == int or key[i] is None for i, el in enumerate(key)]):
             raise TypeError('Argument has to be type int or None')
         if len(key) > 2:
             raise IndexError('Index out of range.')
         i, j = key
-        if i != None and j != None:
+        if i is not None and j is not None:
             slice_ = slice(self.CSR['IROW'][i], self.CSR['IROW'][i+1])
             if j in self.CSR['JCOL'][slice_]:
                 j_index = self.CSR['IROW'][i]+self.CSR['JCOL'][slice_].index(j)
                 return self.CSR['AVAL'][j_index]
             else:
                 return 0
-        if i != None and j == None:
+        if i is not None and j is None:
             # Retrun row at `i`
             return [self[i, k] for k in range(self.shape[1])]
-        if i == None and j != None:
+        if i is None and j is not None:
             # Return col at `JCOL`
             return [self[k, j] for k in range(self.shape[0])]
 
@@ -257,6 +257,7 @@ class sparse(object):
         jcol = np.array([], dtype=np.int32)
         aval = np.array([], dtype=np.float)
         irow = np.array([0], dtype=np.int32)
+        array *= ~np.isclose(array, np.zeros_like(array))  # Floor all numerical zeros
         for row in array:
             row: np.ndarray
             indices = np.nonzero(row)[0]
@@ -328,7 +329,7 @@ class sparse(object):
         if type(other) != sparse and len(other.shape) == 1:  # check for vector
             return self._vdot(other)
         if type(other) == np.ndarray:  # check for ndarray
-            return self.toarray() @ other
+            return sparse(self.toarray() @ other)
         return self._mdot(other)
 
     @shape_govenour(axis=(1, 2))
@@ -342,6 +343,12 @@ class sparse(object):
                 row = self[i, None]
                 col = other[None, j]
                 result[i, j] = sum([r*c for r, c in zip(row, col)])
+                # temp_result = 0
+                # for r, c in zip(row, col):
+                #     if np.isclose(r, 0) or np.isclose(c, 0):
+                #         continue
+                #     temp_result += r*c
+                # result[i, j] = temp_result
         return sparse(result)
 
     @shape_govenour(axis=(1, 1))
@@ -367,6 +374,8 @@ class sparse(object):
             for i in range(n):
                 val = 0
                 for j in np.arange(self.CSR['IROW'][i], self.CSR['IROW'][i+1]):
+                    if np.isclose(vec[self.CSR['JCOL'][j]], 0) and np.isclose(self.CSR['AVAL'][j], 0):  # skip numerical zeros
+                        continue
                     val += vec[self.CSR['JCOL'][j]] * self.CSR['AVAL'][j]
                 outvec.append(val)
         else:
@@ -478,7 +487,7 @@ def choose_scheme(matrix):
         raise TypeError('Matrix must be of type `sparse` or `np.ndarray`')
 
 
-class linsys(object):
+class linsys():
     '''
     Author: Henrik Spielvogel
 
@@ -606,7 +615,7 @@ class linsys(object):
                 'Method `{}` unknown. Implemented methods are {}'.format(method, implemented))
 
         if method == 'scipy':
-            if type(mat) == sparse:
+            if isinstance(mat, sparse):
                 sol = scipy.sparse.linalg.spsolve(
                     scipy.sparse.csr_matrix(mat.toarray()), vec)
             else:
