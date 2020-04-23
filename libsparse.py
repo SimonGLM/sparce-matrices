@@ -349,7 +349,10 @@ class sparse():
             return self._vdot(other)
         if type(other) == np.ndarray:  # check for ndarray
             return sparse(self.toarray() @ other)
-        return self._mdot(other)
+        try:
+            return self._mdot(other)
+        except AllZeroError:
+            return np.zeros((self.shape[0], other.shape[1]))
 
     @shape_govenour(axis=(1, 2))
     def _mdot(self, other):
@@ -361,14 +364,17 @@ class sparse():
             for j in range(other.shape[1]):
                 row = self[i, None]
                 col = other[None, j]
-                result[i, j] = sum([r*c for r, c in zip(row, col)])
-                # temp_result = 0
-                # for r, c in zip(row, col):
-                #     if np.isclose(r, 0) or np.isclose(c, 0):
-                #         continue
-                #     temp_result += r*c
-                # result[i, j] = temp_result
-        return sparse(result)
+                # result[i, j] = sum([r*c for r, c in zip(row, col)])
+                temp_result = 0
+                for r, c in zip(row, col):
+                    if r*c < np.finfo(np.float).eps:
+                        continue
+                    temp_result += r*c
+                result[i, j] = temp_result
+        if np.alltrue(result == np.zeros_like(result)):
+            raise AllZeroError
+        else:
+            return sparse(result)
 
     @shape_govenour(axis=(1, 1))
     def _vdot(self, vec: np.ndarray):
