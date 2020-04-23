@@ -66,7 +66,8 @@ def shape_govenour(axis=None):
             cond1 = (type(obj1) in [sparse, np.ndarray, scipy.sparse.spmatrix]) and (
                 type(obj2) in [sparse, np.ndarray, scipy.sparse.spmatrix])
             if not cond1:
-                raise ShapeGovenourError(f"Objects passed to {func.__name__} of incompatible types")
+                raise ShapeGovenourError(
+                    f"Objects passed to {func.__name__} of incompatible types")
 
             assert obj1.shape[axis1 - 1] == obj2.shape[axis2 - 1]
             return func(obj1, obj2)
@@ -196,7 +197,8 @@ class sparse():
             value = float(value)
         except:
             if type(value) not in [int, float, np.int, np.float]:
-                raise TypeError(f'Value is of type {type(value)}, but needs to be int or float.')
+                raise TypeError(
+                    f'Value is of type {type(value)}, but needs to be int or float.')
             raise TypeError("Value was not castable to float")
 
         if len(key) != 2:
@@ -257,7 +259,8 @@ class sparse():
         jcol = np.array([], dtype=np.int32)
         aval = np.array([], dtype=np.float)
         irow = np.array([0], dtype=np.int32)
-        array *= ~np.isclose(array, np.zeros_like(array))  # Floor all numerical zeros
+        # Floor all numerical zeros
+        array *= ~np.isclose(array, np.zeros_like(array))
         for row in array:
             row: np.ndarray
             indices = np.nonzero(row)[0]
@@ -330,7 +333,7 @@ class sparse():
             return self._vdot(other)
         if type(other) == np.ndarray:  # check for ndarray
             return sparse(self.toarray() @ other)
-        return self._mdot(other)
+        return self._mdot_fast(other)
 
     @shape_govenour(axis=(1, 2))
     def _mdot(self, other):
@@ -349,6 +352,31 @@ class sparse():
                 #         continue
                 #     temp_result += r*c
                 # result[i, j] = temp_result
+        return sparse(result)
+
+    @shape_govenour(axis=(1, 2))
+    def _mdot_fast(self, other):
+        '''
+        Author: Henrik Spielvogel
+        '''
+        other = other.transpose()
+        n = self.N
+        result = np.zeros((n, n))
+        for i in range(n):
+            for j in range(n):
+                slice_A = slice(self.CSR['IROW'][i], self.CSR['IROW'][i+1])
+                slice_B = slice(other.CSR['IROW'][j], other.CSR['IROW'][j+1])
+
+                row_val_A = self.CSR['AVAL'][slice_A]
+                col_n_A = self.CSR['JCOL'][slice_A]
+
+                row_val_B = other.CSR['AVAL'][slice_B]
+                col_n_B = other.CSR['JCOL'][slice_B]
+
+                for ind in col_n_A:
+                    if ind in col_n_B:
+                        result[i][j] += row_val_A[col_n_A.index(ind)] * \
+                            row_val_B[col_n_B.index(ind)]
         return sparse(result)
 
     @shape_govenour(axis=(1, 1))
@@ -374,12 +402,14 @@ class sparse():
             for i in range(n):
                 val = 0
                 for j in np.arange(self.CSR['IROW'][i], self.CSR['IROW'][i+1]):
-                    if np.isclose(vec[self.CSR['JCOL'][j]], 0) and np.isclose(self.CSR['AVAL'][j], 0):  # skip numerical zeros
+                    # skip numerical zeros
+                    if np.isclose(vec[self.CSR['JCOL'][j]], 0) and np.isclose(self.CSR['AVAL'][j], 0):
                         continue
                     val += vec[self.CSR['JCOL'][j]] * self.CSR['AVAL'][j]
                 outvec.append(val)
         else:
-            raise ValueError(f'Shape of vec must be ({n},), but is {vec.shape}.')
+            raise ValueError(
+                f'Shape of vec must be ({n},), but is {vec.shape}.')
 
         return np.array(outvec)
 
@@ -410,7 +440,8 @@ def lu_factor(array):
     > `U` : Upper triangular
     '''
     if not quadratic(array):
-        raise AssertionError('LU decomposition is not possible for non-quadratic matrices.')
+        raise AssertionError(
+            'LU decomposition is not possible for non-quadratic matrices.')
     N = array.shape[0]
     P = np.eye(N)
     L = np.eye(N)
@@ -505,7 +536,8 @@ class linsys():
 
     def __init__(self, A, b):
         if type(A) not in [sparse, np.ndarray]:
-            raise TypeError('Matrix A has to be of type sp.sparse or np.ndarray')
+            raise TypeError(
+                'Matrix A has to be of type sp.sparse or np.ndarray')
         self.matrix = A
         self.target_vector = b if (type(b) == np.ndarray) else np.array(b)
         self.shape = A.shape
@@ -570,7 +602,8 @@ class linsys():
         elif type(init_guess) == np.ndarray and init_guess.shape[0] == n:
             x = init_guess
         else:
-            raise ValueError(f'init_guess must be list or np.ndarray of length {n}.')
+            raise ValueError(
+                f'init_guess must be list or np.ndarray of length {n}.')
 
         r = mat.dot(x) - vec
         p = -r
@@ -628,8 +661,23 @@ class linsys():
 
 
 if __name__ == "__main__":
+    A = random_banded(50, 10)
+    B = random_banded(50, 10)
 
-    pass
+    A_s = sparse(A)
+    B_s = sparse(B)
+
+    import time
+    t0 = time.time()
+    sol = np.dot(A, B)
+    t1 = time.time() - t0
+
+    t2 = time.time()
+    s_sol = A_s.dot(B_s)
+    t3 = time.time() - t2
+
+    print(np.allclose(sol, s_sol.toarray()))
+    print('numpy: {}s, _mdot_fast: {}s'.format(t1, t3))
 
 
 '''
