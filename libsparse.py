@@ -25,6 +25,9 @@ This library is part of a project done as an end-term assignment in the 'Scienti
 at the Justus-Liebig-University in Giessen, Germany.
 '''
 
+import pickle
+from functools import wraps
+
 import matplotlib.pyplot as plt
 import numpy as np
 import scipy
@@ -73,6 +76,21 @@ def shape_govenour(axis=None):
 
         return check
     return middle
+
+
+def memoize(func):
+    cache = {}
+    @wraps(func)
+    def wrap(*args, **kwargs):
+        key = pickle.dumps((args, kwargs))
+        if key not in cache:
+            # print('Running func with ', args, kwargs)
+            cache[key] = func(*args, **kwargs)
+        else:
+            # print('result in cache')
+            pass
+        return cache[key]
+    return wrap
 
 
 class sparse():
@@ -135,6 +153,7 @@ class sparse():
     def __matmul__(self, other):
         return self.dot(other)
 
+    # @memoize
     def __getitem__(self, key):
         '''
         Author: Simon Glennemeier-Marke
