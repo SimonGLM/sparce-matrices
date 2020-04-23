@@ -59,8 +59,7 @@ def shape_govenour(axis=None):
         def check(obj1, obj2):
             if axis is None:
                 if obj1.shape != obj2.shape:
-                    raise ShapeGovenourError(
-                        f"Objects of dissimilar dimension cannot be added")
+                    raise ShapeGovenourError(f"Objects of dissimilar dimension cannot be added")
                 return func(obj1, obj2)
 
             assert (type(axis) == tuple) & (len(axis) == 2)
@@ -276,7 +275,6 @@ class sparse():
         jcol = np.array([], dtype=np.int32)
         aval = np.array([], dtype=np.float)
         irow = np.array([0], dtype=np.int32)
-        array *= ~np.isclose(array, np.zeros_like(array))  # Floor all numerical zeros
         for row in array:
             row: np.ndarray
             indices = np.nonzero(row)[0]
@@ -475,8 +473,9 @@ def random_banded(size, num_diags):
     > np.ndarray
     '''
     rng = np.random.default_rng()
-    mat = scipy.sparse.diags([rng.uniform(0, 1, size=size) for i in range(num_diags)],
-                             range((-num_diags+1)//2, (num_diags+1)//2), shape=(size, size)).toarray()
+    mat = scipy.sparse.random(size, size, density=0.01)
+    mat += scipy.sparse.diags([rng.uniform(0, 1, size=size) for i in range(2*num_diags)],
+                              range((-num_diags+1), (num_diags+1)), shape=(size, size)).toarray()
     return np.array(scipy.sparse.eye(size)+(mat+np.transpose(mat))/2)
 
 
