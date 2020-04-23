@@ -13,7 +13,7 @@ object | implements: |
 |`<class 'sparse'>` | CSR storage scheme, set/getitem, dot product, transposition, fullsize array representation, LU decomposition, matrix plot |
 |`<class 'dense'>` | reveals all necessary functions for `linsys` |
 |`<class 'linsys'>` | linear system of equations _**A** b = x_ , Gaussian Elimination for `dense`, Conjugate Gradient solver
-|`<function 'random_banded'>` | generate a random symmetric banded matrix
+|`<method  'random_banded'>` | generate a random symmetric banded matrix
 
 ## Optimization
 
