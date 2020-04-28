@@ -123,15 +123,16 @@ class sparse():
         temp = array if (type(array) == np.ndarray) else np.array(array)
         if np.count_nonzero(temp) == 0:
             raise AllZeroError("Sparse arrays can not be all zeros")
-        self.sparsity = 1 - np.count_nonzero(temp) / temp.size
+        self.density = np.count_nonzero(temp) / temp.size
         self.shape = temp.shape
         self.T = self.transpose
         self.CSR = self.construct_CSR_fast(temp)
         del temp
-        self.N = self.shape[0] if quadratic(self) else None
+        if quadratic(self):
+            self.N = self.shape[0]
 
     def __repr__(self):
-        return '<sparse matrix of shape {} and sparsity {:.2f}>'.format(self.shape, self.sparsity)
+        return '<sparse matrix of shape {} and density {:.2f}>'.format(self.shape, self.density)
 
     @shape_govenour(axis=None)
     def __add__(self, other):
@@ -510,30 +511,30 @@ def random_banded(size, num_diags):
 def choose_scheme(matrix):
     '''
     Author: Henrik Spielvogel
-    Chooses storage scheme based on sparsity of input matrix.
+    Chooses storage scheme based on denisty of input matrix.
     Returns:
     --------
-    > `np.ndarray` : array of self (if sparsity <= 0.9)
-    > `sp.sparse` : sparse object of self (if sparsity > 0.9)
+    > `np.ndarray` : array of self (if denisty > 0.1)
+    > `sp.sparse` : sparse object of self (if denisty < 0.1)
     '''
     if type(matrix) == sparse:
-        if matrix.sparsity >= 0.9:
-            print('Chosen storage scheme:   sparse  (sparsity = {:2.2f})'.format(
-                matrix.sparsity))
+        if matrix.denisty < 0.1:
+            print('Chosen storage scheme:   sparse  (denisty = {:2.2f})'.format(
+                matrix.denisty))
             return matrix
         else:
             print(
-                'Chosen storage scheme:   dense   (sparsity = {:2.2f})'.format(matrix.sparsity))
+                'Chosen storage scheme:   dense   (denisty = {:2.2f})'.format(matrix.denisty))
             return matrix.toarray()
     elif type(matrix) == np.ndarray:
-        sparsity = 1 - np.count_nonzero(matrix)/matrix.size
-        if sparsity >= 0.9:
-            print('Chosen storage scheme:   sparse  (sparsity = {:2.2f})'.format(
-                sparsity))
+        denisty = np.count_nonzero(matrix)/matrix.size
+        if denisty < 0.1:
+            print('Chosen storage scheme:   sparse  (denisty = {:2.2f})'.format(
+                denisty))
             return sparse(matrix)
         else:
             print(
-                'Chosen storage scheme:   dense   (sparsity = {:2.2f})'.format(sparsity))
+                'Chosen storage scheme:   dense   (denisty = {:2.2f})'.format(denisty))
             return matrix
     else:
         raise TypeError('Matrix must be of type `sparse` or `np.ndarray`')
@@ -547,7 +548,7 @@ class linsys():
     ================================
 
     This object creates linear systems of equations of the form Ax=b.
-    It implements different methods for solving these systems considering the sparsity of the given matrix A.
+    It implements different methods for solving these systems considering the denisty of the given matrix A.
 
     Arguments:
     ----------
