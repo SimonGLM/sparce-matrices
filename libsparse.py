@@ -25,6 +25,9 @@ This library is part of a project done as an end-term assignment in the 'Scienti
 at the Justus-Liebig-University in Giessen, Germany.
 '''
 
+import pickle
+from functools import wraps
+
 import matplotlib.pyplot as plt
 import numpy as np
 import scipy
@@ -41,7 +44,7 @@ class AllZeroError(BaseException):
     """
 
 
-class ShapeGovenourError(BaseException):
+class ShapeError(BaseException):
     """
     Improper objects for sparse array operation
     """
@@ -56,8 +59,7 @@ def shape_govenour(axis=None):
         def check(obj1, obj2):
             if axis is None:
                 if obj1.shape != obj2.shape:
-                    raise ShapeGovenourError(
-                        f"Objects of dissimilar dimension cannot be added")
+                    raise ShapeError(f"Objects of dissimilar dimension cannot be added")
                 return func(obj1, obj2)
 
             assert (type(axis) == tuple) & (len(axis) == 2)
@@ -66,14 +68,28 @@ def shape_govenour(axis=None):
             cond1 = (type(obj1) in [sparse, np.ndarray, scipy.sparse.spmatrix]) and (
                 type(obj2) in [sparse, np.ndarray, scipy.sparse.spmatrix])
             if not cond1:
-                raise ShapeGovenourError(
-                    f"Objects passed to {func.__name__} of incompatible types")
+                raise ShapeError(f"Objects passed to {func.__name__} of incompatible types")
 
             assert obj1.shape[axis1 - 1] == obj2.shape[axis2 - 1]
             return func(obj1, obj2)
 
         return check
     return middle
+
+
+def memoize(func):
+    cache = {}
+    @wraps(func)
+    def wrap(*args, **kwargs):
+        key = pickle.dumps((args, kwargs))
+        if key not in cache:
+            # print('Running func with ', args, kwargs)
+            cache[key] = func(*args, **kwargs)
+        else:
+            # print('result in cache')
+            pass
+        return cache[key]
+    return wrap
 
 
 class sparse():
@@ -136,6 +152,7 @@ class sparse():
     def __matmul__(self, other):
         return self.dot(other)
 
+    # @memoize
     def __getitem__(self, key):
         '''
         Author: Simon Glennemeier-Marke
@@ -259,8 +276,6 @@ class sparse():
         jcol = np.array([], dtype=np.int32)
         aval = np.array([], dtype=np.float)
         irow = np.array([0], dtype=np.int32)
-        # Floor all numerical zeros
-        array *= ~np.isclose(array, np.zeros_like(array))
         for row in array:
             row: np.ndarray
             indices = np.nonzero(row)[0]
@@ -333,7 +348,10 @@ class sparse():
             return self._vdot(other)
         if type(other) == np.ndarray:  # check for ndarray
             return sparse(self.toarray() @ other)
-        return self._mdot_fast(other)
+        try:
+            return self._mdot_fast(other)
+        except AllZeroError:
+            return np.zeros((self.shape[0], other.shape[1]))
 
     @shape_govenour(axis=(1, 2))
     def _mdot(self, other):
@@ -345,14 +363,17 @@ class sparse():
             for j in range(other.shape[1]):
                 row = self[i, None]
                 col = other[None, j]
-                result[i, j] = sum([r*c for r, c in zip(row, col)])
-                # temp_result = 0
-                # for r, c in zip(row, col):
-                #     if np.isclose(r, 0) or np.isclose(c, 0):
-                #         continue
-                #     temp_result += r*c
-                # result[i, j] = temp_result
-        return sparse(result)
+                # result[i, j] = sum([r*c for r, c in zip(row, col)])
+                temp_result = 0
+                for r, c in zip(row, col):
+                    if r*c < np.finfo(np.float).eps:
+                        continue
+                    temp_result += r*c
+                result[i, j] = temp_result
+        if np.alltrue(result == np.zeros_like(result)):
+            raise AllZeroError
+        else:
+            return sparse(result)
 
     @shape_govenour(axis=(1, 2))
     def _mdot_fast(self, other):
@@ -440,8 +461,7 @@ def lu_factor(array):
     > `U` : Upper triangular
     '''
     if not quadratic(array):
-        raise AssertionError(
-            'LU decomposition is not possible for non-quadratic matrices.')
+        raise ShapeError('LU decomposition is not possible for non-quadratic matrices.')
     N = array.shape[0]
     P = np.eye(N)
     L = np.eye(N)
@@ -481,8 +501,9 @@ def random_banded(size, num_diags):
     > np.ndarray
     '''
     rng = np.random.default_rng()
-    mat = scipy.sparse.diags([rng.uniform(0, 1, size=size) for i in range(num_diags)],
-                             range((-num_diags+1)//2, (num_diags+1)//2), shape=(size, size)).toarray()
+    mat = scipy.sparse.random(size, size, density=0.01)
+    mat += scipy.sparse.diags([rng.uniform(0, 1, size=size) for i in range(2*num_diags)],
+                              range((-num_diags+1), (num_diags+1)), shape=(size, size)).toarray()
     return np.array(scipy.sparse.eye(size)+(mat+np.transpose(mat))/2)
 
 
