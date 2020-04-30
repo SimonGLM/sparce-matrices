@@ -11,7 +11,6 @@ In the scope of the project at hand, we needed to implement a storage scheme for
 object | implements: |
 :---:|:---
 |`<class 'sparse'>` | CSR storage scheme, set/getitem, dot product, transposition, fullsize array representation, LU decomposition, matrix plot |
-|`<class 'dense'>` | reveals all necessary functions for `linsys` |
 |`<class 'linsys'>` | linear system of equations _**A** b = x_ , Gaussian Elimination for `dense`, Conjugate Gradient solver
 |`<method  'random_banded'>` | generate a random symmetric banded matrix
 

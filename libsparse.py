@@ -246,8 +246,8 @@ class sparse():
         > self.CSR :  dict containing the CSR object
         '''
         csr = {'AVAL': [], 'JCOL': [], 'IROW': [0]}
-        for _, col in enumerate(array):
-            for i, el in enumerate(col):
+        for _, row in enumerate(array):
+            for i, el in enumerate(row):
                 if el != 0:
                     csr['AVAL'].append(el)
                     csr['JCOL'].append(i)
@@ -273,6 +273,13 @@ class sparse():
         Returns:
         > self.CSR :  dict containing the CSR object
         '''
+
+        if self.density > 0.1:
+            print(
+                f"""
+                DensityWarning: Density of {self.density:2.2f} is too high for the storage scheme to be efficient.
+                                We recommend using choose_scheme to determine the optimal method for you.
+                """)
         array: np.ndarray
         jcol = np.array([], dtype=np.int32)
         aval = np.array([], dtype=np.float)
@@ -683,23 +690,9 @@ class linsys():
 
 
 if __name__ == "__main__":
-    A = random_banded(50, 10)
-    B = random_banded(50, 10)
-
-    A_s = sparse(A)
-    B_s = sparse(B)
-
-    import time
-    t0 = time.time()
-    sol = np.dot(A, B)
-    t1 = time.time() - t0
-
-    t2 = time.time()
-    s_sol = A_s.dot(B_s)
-    t3 = time.time() - t2
-
-    print(np.allclose(sol, s_sol.toarray()))
-    print('numpy: {}s, _mdot_fast: {}s'.format(t1, t3))
+    mat = random_banded(1000, 10)
+    A = sparse(mat)
+    A.construct_CSR(mat)
 
 
 '''

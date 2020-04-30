@@ -150,9 +150,9 @@ def test_mem_efficiency():
     density = np.delete(np.arange(0, 1, 0.05), 0)
 
     for rho in density:
-        mat = scipy.sparse.random(100, 100, density=rho).toarray()
-        size_numpy.append(asizeof.asizeof(mat))
-        size_sparse.append(asizeof.asizeof(sp.sparse(mat)))
+        mat = scipy.sparse.random(1000, 1000, density=rho)
+        size_numpy.append(asizeof.asizeof(mat.toarray()))
+        size_sparse.append(asizeof.asizeof(sp.sparse(mat.toarray())))
     fig = plt.figure()
     name = "mem_efficiency"
     fig: plt.Figure
