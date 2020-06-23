@@ -37,6 +37,8 @@ import scipy.sparse.linalg
 
 np.set_printoptions(edgeitems=8, linewidth=120)
 
+hide_DensityWarning = False
+
 
 class AllZeroError(BaseException):
     """
@@ -276,7 +278,7 @@ class sparse():
         > self.CSR :  dict containing the CSR object
         '''
 
-        if self.density > 0.1:
+        if (self.density > 0.1) and not hide_DensityWarning:
             print(
                 f"""
                 DensityWarning: Density of {self.density:2.2f} is too high for the storage scheme to be efficient.
@@ -576,7 +578,7 @@ class linsys():
         self.N = A.shape[0]
 
     def __repr__(self):
-        return '<linsys of dimension: {} >'.format(self.N)
+        return '<linsys of dimension N = {} >'.format(self.N)
 
     def lu_solve(self):
         '''
