@@ -59,7 +59,8 @@ def shape_govenour(axis=None):
         def check(obj1, obj2):
             if axis is None:
                 if obj1.shape != obj2.shape:
-                    raise ShapeError(f"Objects of dissimilar dimension cannot be added")
+                    raise ShapeError(
+                        f"Objects of dissimilar dimension cannot be added")
                 return func(obj1, obj2)
 
             assert (type(axis) == tuple) & (len(axis) == 2)
@@ -68,7 +69,8 @@ def shape_govenour(axis=None):
             cond1 = (type(obj1) in [sparse, np.ndarray, scipy.sparse.spmatrix]) and (
                 type(obj2) in [sparse, np.ndarray, scipy.sparse.spmatrix])
             if not cond1:
-                raise ShapeError(f"Objects passed to {func.__name__} of incompatible types")
+                raise ShapeError(
+                    f"Objects passed to {func.__name__} of incompatible types")
 
             assert obj1.shape[axis1 - 1] == obj2.shape[axis2 - 1]
             return func(obj1, obj2)
@@ -461,7 +463,8 @@ def lu_factor(array):
     > `U` : Upper triangular
     '''
     if not quadratic(array):
-        raise ShapeError('LU decomposition is not possible for non-quadratic matrices.')
+        raise ShapeError(
+            'LU decomposition is not possible for non-quadratic matrices.')
     N = array.shape[0]
     P = np.eye(N)
     L = np.eye(N)
@@ -595,7 +598,7 @@ class linsys():
 
         return sol
 
-    def cg_solve(self, init_guess=None, TOL=1e-15):
+    def cg_solve(self, init_guess=None, TOL=1e-15, return_iter=False):
         '''
         Author: Henrik Spielvogel
 
@@ -640,13 +643,16 @@ class linsys():
             r_norm = r_norm_next
 
             if r_norm_next < TOL:
-                print('CG-Method converged after {} iterations.'.format(i))
+                print('CG-Method converged after {} iterations.'.format(i+1))
                 break
             p = beta * p - r
 
         sol = x
 
-        return sol
+        if return_iter:
+            return sol, i+1
+        else:
+            return sol
 
     def solve(self, method='scipy'):
         '''
