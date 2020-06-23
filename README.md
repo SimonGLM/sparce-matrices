@@ -11,7 +11,6 @@ In the scope of the project at hand, we needed to implement a storage scheme for
 object | implements: |
 :---:|:---
 |`<class 'sparse'>` | CSR storage scheme, set/getitem, dot product, transposition, fullsize array representation, LU decomposition, matrix plot |
-|`<class 'dense'>` | reveals all necessary functions for `linsys` |
 |`<class 'linsys'>` | linear system of equations _**A** b = x_ , Gaussian Elimination for `dense`, Conjugate Gradient solver
 |`<method  'random_banded'>` | generate a random symmetric banded matrix
 
@@ -76,7 +75,7 @@ the first implementation `construct_CSR` took 148 seconds to return our CSR form
 </details>
 
 If we now take a look at the new `construct_CSR_fast` method we can see that we achieved a massive speed-up.
-The largest time gain was achieved by reducing the complexity from quadratic O(nÂ²) to linear O(n) time and using numpy methods which are implemented using C and therefore are a lot faster.
+The largest time gain was achieved by reducing the complexity from quadratic O(n²) to linear O(n) time and using numpy methods which are implemented using C and therefore are a lot faster.
 
 This benchmarking was done for numerous implemented functions and used to refactor methods for better runtime.
 These functions will not be listed here explicitly.
