@@ -83,30 +83,24 @@ def test_matrix_matrix_algebra(in1, in2):
     else:
         sp1 = sp.sparse(in1)
         sp2 = sp.sparse(in2)
-        cond11 = np.allclose(in1+in2, sp1.__add__(sp2).toarray())
-        cond12 = np.allclose(in1+in2, (sp1.__add__(in1)).toarray())
-        print("cond11 =", cond11, " and cond12 =", cond12)
-        assert cond11 and cond12
-        cond21 = np.allclose(in1+in2, (sp1+sp2).toarray())
-        cond22 = np.allclose(in1+in2, (sp1+in1).toarray())
-        print("cond21 =", cond21, " and cond22 =", cond22)
-        assert cond21 and cond22
-        cond31 = np.allclose(in1-in2, sp1.__sub__(sp2).toarray())
-        cond32 = np.allclose(in1-in2, sp1.__sub__(in1).toarray())
-        print("cond31 =", cond31, " and cond32 =", cond32)
-        assert cond31 and cond32
-        cond41 = np.allclose(in1-in2, (sp1-sp2).toarray())
-        cond42 = np.allclose(in1-in2, (sp1-in1).toarray())
-        print("cond41 =", cond41, " and cond42 =", cond42)
-        assert cond41 and cond42
-        cond51 = np.allclose(in1@in2, sp1.__matmul__(sp2).toarray())
-        cond52 = np.allclose(in1@in2, sp1.__matmul__(in1).toarray())
-        print("cond51 =", cond51, " and cond52 =", cond52)
-        assert cond51 and cond52
-        cond61 = np.allclose(in1@in2, (sp1@sp2).toarray())
-        cond62 = np.allclose(in1@in2, (sp1@in1).toarray())
-        print("cond61 =", cond61, " and cond62 =", cond62)
-        assert cond61 and cond62
+        cond1 = np.allclose(in1+in2, sp1.__add__(sp2).toarray())
+        # print("cond1 =", cond1)
+        assert cond1
+        cond2 = np.allclose(in1+in2, (sp1+sp2).toarray())
+        # print("cond2 =", cond2)
+        assert cond2
+        cond3 = np.allclose(in1-in2, sp1.__sub__(sp2).toarray())
+        # print("cond3 =", cond3)
+        assert cond3
+        cond4 = np.allclose(in1-in2, (sp1-sp2).toarray())
+        # print("cond4 =", cond4)
+        assert cond4
+        cond5 = np.allclose(in1@in2, sp1.__matmul__(sp2).toarray())
+        # print("cond5 =", cond5)
+        assert cond5
+        cond6 = np.allclose(in1@in2, (sp1@sp2).toarray())
+        # print("cond6 =", cond6)
+        assert cond6
 
 
 @settings(deadline=None)
