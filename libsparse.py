@@ -82,6 +82,11 @@ def shape_govenour(axis=None):
 
 
 def memoize(func):
+    """
+    Author: Simon Glennemeier-Marke
+
+    (unused)
+    """
     cache = {}
     @wraps(func)
     def wrap(*args, **kwargs):
@@ -139,6 +144,10 @@ class sparse():
         return '<sparse matrix of shape {} and density {:.2f}>'.format(self.shape, self.density)
 
     @shape_govenour(axis=None)
+    """
+    Author: Simon Glennemeier-Marke
+    """
+
     def __add__(self, other):
         NEW = sparse(self.toarray())
         for i in range(self.shape[0]):
@@ -148,6 +157,9 @@ class sparse():
 
     @shape_govenour(axis=None)
     def __sub__(self, other):
+        """
+        Author: Simon Glennemeier-Marke
+        """
         NEW = sparse(self.toarray())
         for i in range(self.shape[0]):
             for j in range(self.shape[1]):
@@ -377,6 +389,8 @@ class sparse():
     def _mdot(self, other):
         '''
         Author: Simon Glennemeier-Marke
+
+        Calculate matrix product
         '''
         result = np.zeros((self.shape[0], other.shape[1]))
         for i in range(self.shape[0]):
@@ -399,6 +413,8 @@ class sparse():
     def _mdot_fast(self, other):
         '''
         Author: Henrik Spielvogel
+
+        Calculate matrix product
         '''
         other = other.transpose()
         n = self.N
