@@ -179,7 +179,11 @@ class sparse():
         if not all([type(key[i]) == int or key[i] is None for i, el in enumerate(key)]):
             raise TypeError('Argument has to be type int or None')
         if len(key) > 2:
-            raise IndexError('Index out of range.')
+            raise IndexError(f'Too many key values. Expected 2 but {len(key)} were given.')
+
+        if (self.shape[0] < key[0]) or (self.shape[1] < key[1]):
+            raise IndexError("Key values are out of range")
+
         i, j = key
         if i is not None and j is not None:
             slice_ = slice(self.CSR['IROW'][i], self.CSR['IROW'][i+1])
@@ -225,6 +229,10 @@ class sparse():
 
         if len(key) != 2:
             raise IndexError('Index has to be tuple.')
+
+        if (self.shape[0] < key[0]) or (self.shape[1] < key[1]):
+            raise IndexError("Key values are out of range")
+
         i, j = key
         slice_ = slice(self.CSR['IROW'][i], self.CSR['IROW'][i+1])
         if j in self.CSR['JCOL'][slice_]:  # Value exists, just needs to be overwritten
